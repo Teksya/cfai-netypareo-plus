@@ -34,6 +34,14 @@ Prévu (visible et grisé dans l'onglet "Plus") :
 
 - **Notes et bulletin**, **travail à faire**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
 
+### 📸 Aperçu
+
+| Planning | Détail d'un cours | Cahier de textes | Alertes et agenda |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/planning.png" width="200" alt="Planning du jour"> | <img src="docs/screenshots/seance.png" width="200" alt="Fiche d'un cours"> | <img src="docs/screenshots/cahier.png" width="200" alt="Cahier de textes"> | <img src="docs/screenshots/plus.png" width="200" alt="Onglet Plus"> |
+
+Captures faites avec un vrai compte. Les noms des formateurs sont masqués.
+
 ### 🔍 Jusqu'où va le projet
 
 - La première version tourne sur Android. Elle a été testée sur un émulateur (Android 16) avec un vrai compte apprenant.
@@ -115,7 +123,7 @@ Un endpoint a changé, ou tu en as trouvé un nouveau ? Mets à jour [docs/netyp
 
 Les pull requests sont relues et testées avant d'être fusionnées. Utilise les commentaires de la pull request pour suggérer des améliorations.
 
-> ⚠️ Règle d'or : **aucune donnée personnelle dans le dépôt**. Pas d'identifiant ni de mot de passe, pas de lien iCal (il donne accès au planning sans mot de passe), pas de nom, d'adresse ou de numéro de contrat, pas de capture d'écran non anonymisée. Git garde tout dans son historique.
+> ⚠️ Règle d'or : **aucune donnée personnelle dans le dépôt**. Pas d'identifiant ni de mot de passe, pas de lien iCal (il donne accès au planning sans mot de passe), pas de nom, d'adresse ou de numéro de contrat, pas de capture d'écran sans l'accord de la personne dont c'est le compte, et toujours avec les noms des formateurs masqués. Git garde tout dans son historique.
 
 ## 🔒 Les règles de sécurité
 
