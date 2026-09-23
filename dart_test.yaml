@@ -1,0 +1,3 @@
+tags:
+  network:
+    skip: "Sonde du vrai serveur NetYParéo : lancer avec flutter test --run-skipped -t network"

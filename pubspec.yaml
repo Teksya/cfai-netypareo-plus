@@ -1,0 +1,42 @@
+name: netypareo_plus
+description: "Application Android non officielle pour NetYParéo (CFAI LDA de Saint-Étienne)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  cookie_jar: ^4.0.9
+  dio: ^5.11.1
+  dio_cookie_manager: ^3.5.0
+  dynamic_color: ^2.1.0
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^11.2.0
+  html: ^0.15.7
+  intl: ^0.20.2
+  open_filex: ^4.7.0
+  path_provider: ^2.1.6
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/certs/sectigo_dv_r36.pem
+    - assets/logo/logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/logo/logo.png
+  adaptive_icon_background: "#EDEBFF"
+  adaptive_icon_foreground: assets/logo/logo_foreground.png
+  adaptive_icon_monochrome: assets/logo/logo_foreground.png
+  min_sdk_android: 21

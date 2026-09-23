@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo/logo.png" alt="Logo NetYParéo+" width="140"></p>
+
 # 📱 NetYParéo+ (cfai-netypareo-plus)
 
 Bienvenue sur le dépôt de **NetYParéo+**, une application Flutter pour consulter NetYParéo, le portail des apprentis du CFAI LDA de Saint-Étienne, sans passer par le site.
@@ -14,18 +16,26 @@ Bienvenue sur le dépôt de **NetYParéo+**, une application Flutter pour consul
 
 NetYParéo contient tout ce dont un apprenti a besoin : l'emploi du temps, le calendrier centre / entreprise, les notes, les absences, le cahier de textes, le travail à faire et les documents. Le site est lent sur téléphone, la session expire vite, et il ne prévient de rien. **NetYParéo+** reprend ces données dans une application pensée pour le téléphone, avec une synchronisation en arrière-plan et des notifications.
 
-### 🚀 Fonctionnalités prévues
+### 🚀 Fonctionnalités
 
-- **Emploi du temps** par jour et par semaine, consultable hors ligne, avec le détail de chaque séance (salle, formateur, contenu du cahier de textes).
-- **Calendrier de formation** : les semaines au centre et les semaines en entreprise.
-- **Notes et bulletin**, **absences**.
-- **Cahier de textes** et **travail à faire**.
-- **Documents** : consultation et téléchargement.
-- **Notifications** quand un cours est déplacé, ajouté ou annulé.
+Déjà dans l'application (version 0.1, Android) :
+
+- **Connexion** avec ton compte NetYParéo, reconnexion automatique quand la session expire.
+- **Emploi du temps** par jour, avec la semaine en haut, consultable hors ligne. Le cours en cours est mis en avant, les pauses sont affichées.
+- **Détail d'une séance** : salle, formateur, groupes, contenu du cahier de textes.
+- **Cahier de textes** : séances passées ou à venir, tri au choix, filtre par matière.
+- **Pièces jointes** : téléchargées puis ouvertes dans l'application adaptée du téléphone.
+- **Absences**.
+- Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
+
+Prévu (visible et grisé dans l'onglet "Plus") :
+
+- **Alertes** quand un cours est ajouté, déplacé ou annulé (synchronisation en arrière-plan).
+- **Notes et bulletin**, **travail à faire**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
 
 ### 🔍 Jusqu'où va le projet
 
-- Le projet en est à la **cartographie** : les endpoints sont relevés dans [docs/netypareo-api.md](docs/netypareo-api.md), le code de l'application n'est pas encore écrit.
+- La première version tourne sur Android. Elle a été testée sur un émulateur (Android 16) avec un vrai compte apprenant.
 - NetYParéo n'a **pas d'API officielle**. L'application lit les mêmes pages et les mêmes appels que le site : si YMAG (l'éditeur) change le site, une partie de l'application peut cesser de fonctionner jusqu'à sa mise à jour.
 - Les notes n'ont pas encore été testées : aucune note n'était saisie au moment de l'exploration (septembre 2026).
 - L'application ne fait que **lire**. Rendre un devoir ou déposer un document restent à faire sur le site.
@@ -38,10 +48,20 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 2. **Emploi du temps** : le flux iCalendar personnel de l'apprenant. Il fonctionne sans session, ce qui permet la synchronisation en arrière-plan.
 3. **Le reste** : du JSON quand le site en fournit (planning, jours de cours, calendrier), sinon la lecture des pages HTML. Les pages sont encodées en `windows-1252`, le JSON en UTF-8.
 4. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
+5. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
+
+### 🗂️ Structure du code
+
+```text
+lib/
+├── core/            Accès réseau : cookies, décodage windows-1252, connexion
+├── data/            Modèles, lecture des pages (parsers), état de l'application et cache
+└── ui/              Écrans (planning, cahier, absences, plus) et composants Material 3 Expressive
+test/                Tests des parsers, sur des données fictives
+tool/gen_logo.dart   Génère le logo en SVG
+```
 
 ## 🚀 Lancer l'application en local
-
-> 🚧 Le code de l'application n'est pas encore dans le dépôt. Cette section sera complétée à son arrivée.
 
 Il te faudra [Flutter](https://docs.flutter.dev/get-started/install) (canal stable).
 
@@ -59,7 +79,7 @@ flutter run
 | `flutter test` | Lance les tests |
 | `flutter build apk` | Construit l'application Android |
 
-Paquets prévus : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants).
+Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes).
 
 ## 📝 Contribution
 
