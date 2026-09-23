@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../core/netypareo_client.dart';
+import 'calendar_mirror.dart';
 import 'models.dart';
 import 'notifications.dart';
 import 'parsers.dart';
@@ -78,6 +79,7 @@ void callbackDispatcher() {
       final code = Profile.fromJson(jsonDecode(profile) as Map<String, dynamic>).codeApprenant;
       final fresh = parseIcal(await client.getPublicText(url), codeApprenant: code);
       await PlanningNotifications.showChanges(await PlanningStore.save(prefs, fresh));
+      await CalendarMirror.sync(prefs, fresh);
       return true;
     } catch (e) {
       debugPrint('Synchronisation en arrière-plan : $e');

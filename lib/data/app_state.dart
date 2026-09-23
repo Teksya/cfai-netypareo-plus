@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/netypareo_client.dart';
 import 'background_sync.dart';
+import 'calendar_mirror.dart';
 import 'models.dart';
 import 'notifications.dart';
 import 'parsers.dart';
@@ -35,6 +36,9 @@ class AppState extends ChangeNotifier {
 
   /// Alertes de changement de cours (synchronisation en arrière-plan et notifications).
   bool get alertsEnabled => _prefs.getBool(kAlertsKey) ?? true;
+
+  /// Copie du planning dans l'agenda du téléphone.
+  bool get calendarEnabled => CalendarMirror.enabled(_prefs);
 
   Timer? _keepAlive;
 
@@ -103,6 +107,7 @@ class AppState extends ChangeNotifier {
   Future<void> logout() async {
     _keepAlive?.cancel();
     await BackgroundSync.cancel();
+    await CalendarMirror.disable(_prefs);
     try {
       await _client.logout();
     } catch (_) {
@@ -150,6 +155,19 @@ class AppState extends ChangeNotifier {
     return allowed;
   }
 
+  /// Active ou coupe la copie dans l'agenda. Renvoie false si Android refuse l'accès à l'agenda.
+  Future<bool> setCalendar(bool enabled) async {
+    try {
+      if (!enabled) {
+        await CalendarMirror.disable(_prefs);
+        return true;
+      }
+      return await CalendarMirror.enable(_prefs, seances);
+    } finally {
+      notifyListeners();
+    }
+  }
+
   Future<void> _loadProfile() async {
     final accueil = parseAccueil(await _client.getHtml('/apprenant/accueil'));
     final code = accueil.codeApprenant;
@@ -170,7 +188,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> sync({bool force = false}) async {
     if (syncing) return;
-    if (!force && lastSync != null && DateTime.now().difference(lastSync!) < const Duration(minutes: 15)) return;
+    if (!force && lastSync != null && DateTime.now().difference(lastSync!) < const Duration(minutes: 1)) return;
     syncing = true;
     syncError = null;
     notifyListeners();
@@ -188,6 +206,7 @@ class AppState extends ChangeNotifier {
       seances = fresh;
       lastSync = DateTime.now();
       if (alertsEnabled) await PlanningNotifications.showChanges(changes);
+      unawaited(CalendarMirror.sync(_prefs, fresh).catchError((Object e) => debugPrint('Agenda : $e')));
     } catch (e) {
       syncError = _message(e);
     } finally {

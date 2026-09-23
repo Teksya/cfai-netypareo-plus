@@ -95,6 +95,34 @@ class ProfilePage extends StatelessWidget {
                     },
                   ),
                 ),
+                const SizedBox(height: 12),
+                Card(
+                  child: SwitchListTile(
+                    secondary: const Icon(Icons.event_available_rounded),
+                    title: const Text('Copier dans mon agenda'),
+                    subtitle: const Text(
+                      'Ajoute un agenda "NetYParéo+" au téléphone, visible dans Google Agenda, '
+                      'Samsung Agenda... Il se met à jour à chaque synchronisation.',
+                    ),
+                    isThreeLine: true,
+                    value: state.calendarEnabled,
+                    onChanged: (on) async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final allowed = await state.setCalendar(on);
+                        messenger.showSnackBar(SnackBar(
+                          content: Text(!allowed
+                              ? "Accès à l'agenda refusé : autorise-le dans les réglages Android."
+                              : on
+                                  ? "Planning copié dans l'agenda NetYParéo+."
+                                  : 'Agenda NetYParéo+ retiré du téléphone.'),
+                        ));
+                      } catch (e) {
+                        messenger.showSnackBar(const SnackBar(content: Text("Impossible d'écrire dans l'agenda.")));
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: 24),
                 Text('Bientôt disponible', style: text.titleLarge),
                 const SizedBox(height: 4),

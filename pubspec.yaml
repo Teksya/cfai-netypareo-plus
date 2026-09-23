@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   cookie_jar: ^4.0.9
+  device_calendar_plus: ^0.8.1
   dio: ^5.11.1
   dio_cookie_manager: ^3.5.0
   dynamic_color: ^2.1.0

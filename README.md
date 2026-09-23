@@ -27,6 +27,7 @@ Déjà dans l'application (version 0.1, Android) :
 - **Pièces jointes** : téléchargées puis ouvertes dans l'application adaptée du téléphone.
 - **Absences**.
 - **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
+- **Copie dans l'agenda du téléphone** (option) : un agenda "NetYParéo+" apparaît dans Google Agenda, Samsung Agenda, etc., et suit chaque synchronisation. Le couper supprime cet agenda, les autres ne sont jamais touchés.
 - Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
 
 Prévu (visible et grisé dans l'onglet "Plus") :
@@ -80,7 +81,7 @@ flutter run
 | `flutter test` | Lance les tests |
 | `flutter build apk` | Construit l'application Android |
 
-Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes).
+Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes), `device_calendar_plus` (agenda).
 
 ## 📝 Contribution
 
