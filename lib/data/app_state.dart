@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/netypareo_client.dart';
+import 'background_sync.dart';
 import 'models.dart';
+import 'notifications.dart';
 import 'parsers.dart';
 
 enum AuthStatus { loading, loggedOut, loggedIn }
@@ -16,13 +17,11 @@ enum AuthStatus { loading, loggedOut, loggedIn }
 class AppState extends ChangeNotifier {
   AppState._(this._client, this._prefs);
 
-  static const _secure = FlutterSecureStorage();
+  static const _secure = kSecure;
   static const _kUser = 'username';
   static const _kPassword = 'password';
-  static const _kIcal = 'icalUrl';
-  static const _kProfile = 'profile';
-  static const _kSeances = 'seances';
-  static const _kLastSync = 'lastSync';
+  static const _kIcal = kIcalKey;
+  static const _kProfile = kProfileKey;
 
   final NetypareoClient _client;
   final SharedPreferences _prefs;
@@ -33,6 +32,9 @@ class AppState extends ChangeNotifier {
   DateTime? lastSync;
   bool syncing = false;
   String? syncError;
+
+  /// Alertes de changement de cours (synchronisation en arrière-plan et notifications).
+  bool get alertsEnabled => _prefs.getBool(kAlertsKey) ?? true;
 
   Timer? _keepAlive;
 
@@ -52,15 +54,13 @@ class AppState extends ChangeNotifier {
       return;
     }
     profile = Profile.fromJson(jsonDecode(profileJson) as Map<String, dynamic>);
-    final cached = _prefs.getString(_kSeances);
-    if (cached != null) {
-      seances = (jsonDecode(cached) as List).map((e) => Seance.fromJson(e as Map<String, dynamic>)).toList();
-    }
-    final last = _prefs.getString(_kLastSync);
+    seances = PlanningStore.read(_prefs) ?? const [];
+    final last = _prefs.getString(kLastSyncKey);
     lastSync = last == null ? null : DateTime.tryParse(last);
     status = AuthStatus.loggedIn;
     notifyListeners();
     _startKeepAlive();
+    unawaited(_scheduleAlerts());
     unawaited(sync());
   }
 
@@ -84,6 +84,7 @@ class AppState extends ChangeNotifier {
     status = AuthStatus.loggedIn;
     notifyListeners();
     _startKeepAlive();
+    unawaited(_scheduleAlerts());
     unawaited(sync(force: true));
     return null;
   }
@@ -101,6 +102,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     _keepAlive?.cancel();
+    await BackgroundSync.cancel();
     try {
       await _client.logout();
     } catch (_) {
@@ -118,6 +120,34 @@ class AppState extends ChangeNotifier {
   void _startKeepAlive() {
     _keepAlive?.cancel();
     _keepAlive = Timer.periodic(const Duration(minutes: 10), (_) => _client.keepAlive().ignore());
+  }
+
+  /// Programme la tâche de fond. L'autorisation de notifier n'est demandée qu'une fois :
+  /// si elle est refusée, l'interrupteur de l'onglet "Plus" permet de la redemander.
+  Future<void> _scheduleAlerts() async {
+    try {
+      if (!alertsEnabled) return BackgroundSync.cancel();
+      if (!(_prefs.getBool('alertsAsked') ?? false)) {
+        await _prefs.setBool('alertsAsked', true);
+        await PlanningNotifications.requestPermission();
+      }
+      await BackgroundSync.schedule();
+    } catch (e) {
+      debugPrint('Alertes indisponibles : $e');
+    }
+  }
+
+  /// Active ou coupe les alertes. Renvoie false si Android refuse les notifications.
+  Future<bool> setAlerts(bool enabled) async {
+    await _prefs.setBool(kAlertsKey, enabled);
+    notifyListeners();
+    if (!enabled) {
+      await BackgroundSync.cancel();
+      return true;
+    }
+    final allowed = await PlanningNotifications.requestPermission();
+    await BackgroundSync.schedule();
+    return allowed;
   }
 
   Future<void> _loadProfile() async {
@@ -153,16 +183,26 @@ class AppState extends ChangeNotifier {
         await _secure.write(key: _kIcal, value: url);
       }
       final ics = await _client.getPublicText(url);
-      seances = parseIcal(ics, codeApprenant: profile?.codeApprenant);
+      final fresh = parseIcal(ics, codeApprenant: profile?.codeApprenant);
+      final changes = await PlanningStore.save(_prefs, fresh);
+      seances = fresh;
       lastSync = DateTime.now();
-      await _prefs.setString(_kSeances, jsonEncode(seances.map((s) => s.toJson()).toList()));
-      await _prefs.setString(_kLastSync, lastSync!.toIso8601String());
+      if (alertsEnabled) await PlanningNotifications.showChanges(changes);
     } catch (e) {
       syncError = _message(e);
     } finally {
       syncing = false;
       notifyListeners();
     }
+  }
+
+  /// Relit le planning enregistré, qui a pu être mis à jour par la tâche de fond.
+  Future<void> reloadCache() async {
+    await _prefs.reload();
+    seances = PlanningStore.read(_prefs) ?? seances;
+    final last = _prefs.getString(kLastSyncKey);
+    lastSync = last == null ? lastSync : DateTime.tryParse(last);
+    notifyListeners();
   }
 
   List<Seance> seancesOn(DateTime day) =>

@@ -26,11 +26,11 @@ Déjà dans l'application (version 0.1, Android) :
 - **Cahier de textes** : séances passées ou à venir, tri au choix, filtre par matière.
 - **Pièces jointes** : téléchargées puis ouvertes dans l'application adaptée du téléphone.
 - **Absences**.
+- **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
 - Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
 
 Prévu (visible et grisé dans l'onglet "Plus") :
 
-- **Alertes** quand un cours est ajouté, déplacé ou annulé (synchronisation en arrière-plan).
 - **Notes et bulletin**, **travail à faire**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
 
 ### 🔍 Jusqu'où va le projet
@@ -47,8 +47,9 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 1. **Connexion** : `POST /authentication/` avec l'identifiant, le mot de passe et le jeton CSRF de la page de connexion. La session est ensuite gardée dans un cookie.
 2. **Emploi du temps** : le flux iCalendar personnel de l'apprenant. Il fonctionne sans session, ce qui permet la synchronisation en arrière-plan.
 3. **Le reste** : du JSON quand le site en fournit (planning, jours de cours, calendrier), sinon la lecture des pages HTML. Les pages sont encodées en `windows-1252`, le JSON en UTF-8.
-4. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
-5. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
+4. **Alertes** : une tâche WorkManager relit le flux iCal toutes les 15 minutes (le minimum d'Android), compare avec la version enregistrée séance par séance, et envoie une notification locale par changement. Rien ne passe par un serveur tiers.
+5. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
+6. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
 
 ### 🗂️ Structure du code
 
@@ -79,7 +80,7 @@ flutter run
 | `flutter test` | Lance les tests |
 | `flutter build apk` | Construit l'application Android |
 
-Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes).
+Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes).
 
 ## 📝 Contribution
 

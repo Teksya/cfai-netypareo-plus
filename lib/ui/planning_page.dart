@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/models.dart';
+import '../data/notifications.dart';
 import '../main.dart';
 import 'expressive.dart';
 import 'format.dart';
@@ -22,10 +23,10 @@ class PlanningPage extends StatefulWidget {
   const PlanningPage({super.key});
 
   @override
-  State<PlanningPage> createState() => _PlanningPageState();
+  State<PlanningPage> createState() => PlanningPageState();
 }
 
-class _PlanningPageState extends State<PlanningPage> {
+class PlanningPageState extends State<PlanningPage> {
   late DateTime _selected = _initialDay();
   late final PageController _pages = PageController(initialPage: _pageOf(_selected));
 
@@ -41,6 +42,16 @@ class _PlanningPageState extends State<PlanningPage> {
   void dispose() {
     _pages.dispose();
     super.dispose();
+  }
+
+  /// Ouvre le jour demandé par une notification, et la séance si elle existe encore.
+  Future<void> open(OpenRequest request) async {
+    final state = AppScope.read(context);
+    await state.reloadCache();
+    if (!mounted) return;
+    _pages.jumpToPage(_pageOf(DateUtils.dateOnly(request.day)));
+    final seance = state.seances.where((s) => s.uid == request.uid).firstOrNull;
+    if (seance != null) await showSeanceSheet(context, seance);
   }
 
   void _goTo(DateTime day) {

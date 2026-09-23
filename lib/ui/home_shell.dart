@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/notifications.dart';
 import '../main.dart';
 import 'absences_page.dart';
 import 'cahier_page.dart';
@@ -16,18 +17,32 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
 
-  static const _pages = [PlanningPage(), CahierPage(), AbsencesPage(), ProfilePage()];
+  final _planning = GlobalKey<PlanningPageState>();
+  late final _pages = [PlanningPage(key: _planning), const CahierPage(), const AbsencesPage(), const ProfilePage()];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PlanningNotifications.openRequests.addListener(_onOpenRequest);
+    // Application lancée par une notification : la demande attend déjà.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onOpenRequest());
   }
 
   @override
   void dispose() {
+    PlanningNotifications.openRequests.removeListener(_onOpenRequest);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onOpenRequest() {
+    final request = PlanningNotifications.openRequests.value;
+    if (request == null || !mounted) return;
+    PlanningNotifications.openRequests.value = null;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    setState(() => _index = 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _planning.currentState?.open(request));
   }
 
   @override

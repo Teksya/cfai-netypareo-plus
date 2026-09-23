@@ -73,6 +73,29 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                Text('Alertes', style: text.titleLarge),
+                const SizedBox(height: 12),
+                Card(
+                  child: SwitchListTile(
+                    secondary: const Icon(Icons.notifications_active_rounded),
+                    title: const Text('Changements de cours'),
+                    subtitle: const Text(
+                      'Vérifie ton planning environ toutes les 15 minutes, même app fermée, '
+                      'et te prévient si un cours est ajouté, retiré ou modifié.',
+                    ),
+                    isThreeLine: true,
+                    value: state.alertsEnabled,
+                    onChanged: (on) async {
+                      final allowed = await state.setAlerts(on);
+                      if (!allowed && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Notifications bloquées : autorise-les dans les réglages Android.'),
+                        ));
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Text('Bientôt disponible', style: text.titleLarge),
                 const SizedBox(height: 4),
                 Text(
@@ -150,7 +173,6 @@ class _UpcomingGrid extends StatelessWidget {
     (Icons.folder_rounded, 'Documents'),
     (Icons.date_range_rounded, 'Calendrier centre / entreprise'),
     (Icons.swap_horiz_rounded, 'Documents de liaison'),
-    (Icons.notifications_active_rounded, 'Alertes de changement de cours'),
   ];
 
   @override

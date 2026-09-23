@@ -4,6 +4,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import 'data/app_state.dart';
+import 'data/background_sync.dart';
+import 'data/notifications.dart';
 import 'ui/expressive.dart';
 import 'ui/home_shell.dart';
 import 'ui/login_page.dart';
@@ -13,6 +15,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.defaultLocale = 'fr_FR';
   await initializeDateFormatting('fr_FR');
+  await PlanningNotifications.init();
+  await PlanningNotifications.checkLaunch();
+  await BackgroundSync.init();
   final state = await AppState.create();
   runApp(NetypareoApp(state: state));
 }
