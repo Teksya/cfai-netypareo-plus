@@ -230,6 +230,51 @@ List<CahierEntry> parseCahierDeTextes(Document doc) {
   return entries;
 }
 
+/// Page `/travail-a-faire/` : groupes par jour d'échéance, précédés de titres
+/// "Aujourd'hui", "A venir" (et "En retard" quand il y en a).
+List<TravailAFaire> parseTravailAFaire(Document doc) {
+  final feed = doc.querySelector('.newsfeed-by-day');
+  if (feed == null) return const [];
+  final result = <TravailAFaire>[];
+  var section = '';
+  for (final child in feed.children) {
+    if (child.localName == 'h1') {
+      section = cleanText(child.text).toLowerCase();
+      continue;
+    }
+    if (!child.classes.contains('newsfeed-group')) continue;
+    final day = RegExp(r'(\d{2})/(\d{2})/(\d{4})').firstMatch(child.querySelector('.newsfeed-group-title')?.text ?? '');
+    if (day == null) continue;
+    final due = DateTime(int.parse(day[3]!), int.parse(day[2]!), int.parse(day[1]!));
+    for (final item in child.querySelectorAll('.js-taf-apprenant')) {
+      final code = int.tryParse(item.attributes['data-code-taf'] ?? '');
+      if (code == null) continue;
+      final body = item.querySelector('.newsfeed-item-body');
+      final seanceLink = body?.querySelector('a[data-code-seance]');
+      // La consigne, sans les documents ni les boutons.
+      final consigne = body?.querySelector('.margin-top-1lh')?.clone(true);
+      consigne?.querySelectorAll('.section, button, .text-right').forEach((e) => e.remove());
+      final undo = item.querySelector('.js-btn-annuler-tfp');
+      result.add(TravailAFaire(
+        code: code,
+        subject: cleanText(item.querySelector('.newsfeed-item-header > div')?.text),
+        codeMatiere: int.tryParse(item.attributes['data-code-matiere'] ?? ''),
+        dueDate: due,
+        givenOn: cleanText(seanceLink?.text),
+        codeSeance: int.tryParse(seanceLink?.attributes['data-code-seance'] ?? ''),
+        teacher: cleanText(body?.querySelector('b')?.text),
+        content: richText(consigne).trim(),
+        documents: _documentLinks(item),
+        late: section.contains('retard'),
+        done: undo != null,
+        codeTravailFait: int.tryParse(undo?.attributes['data-code-tfp'] ?? ''),
+        toHandIn: item.querySelector('.js-btn-rendre-taf, .btn-edit-tfp') != null,
+      ));
+    }
+  }
+  return result;
+}
+
 List<DocumentLink> _documentLinks(Element root) => root
     .querySelectorAll('a[href*="/document/telecharger/"]')
     .map((a) => DocumentLink(cleanText(a.text), a.attributes['href']!))

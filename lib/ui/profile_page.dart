@@ -197,7 +197,6 @@ class _UpcomingGrid extends StatelessWidget {
 
   static const _features = [
     (Icons.grade_rounded, 'Notes et bulletin'),
-    (Icons.assignment_rounded, 'Travail à faire'),
     (Icons.folder_rounded, 'Documents'),
     (Icons.date_range_rounded, 'Calendrier centre / entreprise'),
     (Icons.swap_horiz_rounded, 'Documents de liaison'),

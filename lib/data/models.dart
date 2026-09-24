@@ -143,3 +143,46 @@ class Profile {
         formation: json['formation'] as String,
       );
 }
+
+/// Un travail à faire donné pendant un cours.
+class TravailAFaire {
+  const TravailAFaire({
+    required this.code,
+    required this.subject,
+    required this.dueDate,
+    required this.content,
+    this.codeMatiere,
+    this.givenOn = '',
+    this.codeSeance,
+    this.teacher = '',
+    this.documents = const [],
+    this.late = false,
+    this.done = false,
+    this.codeTravailFait,
+    this.toHandIn = false,
+  });
+
+  final int code;
+  final String subject;
+  final int? codeMatiere;
+
+  /// Jour pour lequel le travail est à faire.
+  final DateTime dueDate;
+
+  /// Date du cours pendant lequel il a été donné, telle qu'affichée par le site.
+  final String givenOn;
+  final int? codeSeance;
+  final String teacher;
+  final String content;
+  final List<DocumentLink> documents;
+
+  /// Rangé par le site dans la partie "en retard".
+  final bool late;
+
+  /// Déclaré comme fait ; [codeTravailFait] sert alors à annuler.
+  final bool done;
+  final int? codeTravailFait;
+
+  /// Le formateur attend un rendu (fichier) : ça se fait sur le site.
+  final bool toHandIn;
+}

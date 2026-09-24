@@ -25,6 +25,7 @@ Déjà dans l'application (version 0.1, Android) :
 - **Détail d'une séance** : salle, formateur, groupes, contenu du cahier de textes.
 - **Cahier de textes** : séances passées ou à venir, tri au choix, filtre par matière.
 - **Pièces jointes** : téléchargées puis ouvertes dans l'application adaptée du téléphone.
+- **Travail à faire** : devoirs rangés par date d'échéance, filtre par matière, consignes et pièces jointes, bouton « Fait » qui met à jour NetYParéo.
 - **Absences**.
 - **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
 - **Copie dans l'agenda du téléphone** (option) : un agenda "NetYParéo+" apparaît dans Google Agenda, Samsung Agenda, etc., et suit chaque synchronisation. Le couper supprime cet agenda, les autres ne sont jamais touchés.
@@ -32,7 +33,7 @@ Déjà dans l'application (version 0.1, Android) :
 
 Prévu (visible et grisé dans l'onglet "Plus") :
 
-- **Notes et bulletin**, **travail à faire**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
+- **Notes et bulletin**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
 
 ### 📸 Aperçu
 
@@ -47,7 +48,7 @@ Captures faites avec un vrai compte. Les noms des formateurs sont masqués.
 - La première version tourne sur Android. Elle a été testée sur un émulateur (Android 16) avec un vrai compte apprenant.
 - NetYParéo n'a **pas d'API officielle**. L'application lit les mêmes pages et les mêmes appels que le site : si YMAG (l'éditeur) change le site, une partie de l'application peut cesser de fonctionner jusqu'à sa mise à jour.
 - Les notes n'ont pas encore été testées : aucune note n'était saisie au moment de l'exploration (septembre 2026).
-- L'application ne fait que **lire**. Rendre un devoir ou déposer un document restent à faire sur le site.
+- L'application **lit** presque tout : la seule écriture est le bouton « Fait » du travail à faire. Rendre un devoir ou déposer un document restent à faire sur le site.
 
 ## 🛠️ Comment ça marche
 
@@ -66,7 +67,7 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 lib/
 ├── core/            Accès réseau : cookies, décodage windows-1252, connexion
 ├── data/            Modèles, lecture des pages (parsers), état de l'application et cache
-└── ui/              Écrans (planning, cahier, absences, plus) et composants Material 3 Expressive
+└── ui/              Écrans (planning, travail, cahier, absences, plus) et composants Material 3 Expressive
 test/                Tests des parsers, sur des données fictives
 tool/gen_logo.dart   Génère le logo en SVG
 ```

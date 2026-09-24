@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -238,11 +239,26 @@ class AppState extends ChangeNotifier {
   Future<List<CahierEntry>> cahierDeTextes() async =>
       parseCahierDeTextes(await _client.getHtml('/pedagogie/apprenant/bilan/consultation-libre-cdt/'));
 
+  Future<List<TravailAFaire>> travailAFaire() async => parseTravailAFaire(await _client.getHtml('/travail-a-faire/'));
+
+  /// Écrit sur NetYParéo : le travail passe en "fait" (annulable).
+  Future<void> declarerFait(TravailAFaire taf) => _client.postHtml('/travail-a-faire/declarer-fait/', {
+        'codeNetTravailAFaire': taf.code,
+        'codeApprenant': profile!.codeApprenant,
+      });
+
+  Future<void> annulerFait(TravailAFaire taf) => _client.postHtml('/travail-a-faire/supprimer-travail/', {
+        'codeNetTravailFaitPar': taf.codeTravailFait,
+      });
+
   Future<({File file, String mimeType})> downloadDocument(DocumentLink link) =>
       _client.downloadDocument(link.path, link.name);
 
   static String _message(Object e) {
-    debugPrint('NetYParéo erreur : $e');
+    // Le lien iCal est secret : son identifiant ne doit pas finir dans les journaux.
+    final path = e is DioException ? e.requestOptions.uri.path.replaceAll(RegExp(r'/ical/[^/]+'), '/ical/…') : null;
+    final where = e is DioException ? ' (${e.requestOptions.method} $path)' : '';
+    debugPrint('NetYParéo erreur$where : $e');
     if (e is NetypareoException) return e.message;
     return 'Connexion à NetYParéo impossible. Vérifie ton réseau.';
   }

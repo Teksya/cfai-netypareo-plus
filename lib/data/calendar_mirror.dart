@@ -96,9 +96,17 @@ class CalendarMirror {
   static Future<String> _ensureCalendar(SharedPreferences prefs) async {
     final calendars = await _calendar.listCalendars();
     final stored = prefs.getString(_kCalendarId);
-    if (stored != null && calendars.any((c) => c.id == stored)) return stored;
-    // Agenda supprimé à la main (ou réinstallation) : on repart de zéro.
-    final id = await _calendar.createCalendar(name: _name, colorHex: '#6D5BF7');
+    final current = calendars.where((c) => c.id == stored).firstOrNull;
+    if (current != null && current.accountName == _name) return current.id;
+    // Premières versions : agenda rangé sous le compte "local", introuvable dans Google Agenda.
+    if (current != null) await _calendar.deleteCalendar(current.id);
+    // Agenda supprimé à la main (ou réinstallation) : on repart de zéro. Le nom de compte est
+    // celui que Google Agenda affiche en titre de section ("Sur cet appareil").
+    final id = await _calendar.createCalendar(
+      name: _name,
+      colorHex: '#6D5BF7',
+      platformOptions: const CreateCalendarOptionsAndroid(accountName: _name),
+    );
     await prefs.setString(_kCalendarId, id);
     await prefs.remove(_kEvents);
     return id;

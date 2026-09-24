@@ -6,6 +6,7 @@ import 'absences_page.dart';
 import 'cahier_page.dart';
 import 'planning_page.dart';
 import 'profile_page.dart';
+import 'travail_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -18,7 +19,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
 
   final _planning = GlobalKey<PlanningPageState>();
-  late final _pages = [PlanningPage(key: _planning), const CahierPage(), const AbsencesPage(), const ProfilePage()];
+  late final _pages = [PlanningPage(key: _planning), const TravailPage(), const CahierPage(), const AbsencesPage(), const ProfilePage()];
 
   @override
   void initState() {
@@ -62,6 +63,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today_rounded),
             label: 'Planning',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment_rounded),
+            label: 'Travail',
           ),
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
