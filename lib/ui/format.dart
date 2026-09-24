@@ -18,3 +18,16 @@ String capitalizeWords(String s) {
 }
 
 String capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+/// Matière abrégée pour les colonnes étroites : "CULTURE ECONOMIQUE JURIDIQUE ET MANAGERIALE" -> "CEJM".
+/// Les noms courts restent entiers.
+String shortSubject(String s) {
+  final full = capitalizeWords(s.replaceAll(RegExp(r'MATH[EÉ]MATIQUES', caseSensitive: false), 'Maths'));
+  if (full.length <= 12) return full;
+  final words = s
+      .split(RegExp(r'\s+'))
+      .where((w) => w.contains(RegExp(r'[A-Za-zÀ-ÿ]')) && !_smallWords.contains(w.toUpperCase()))
+      .toList();
+  if (words.length < 2) return full;
+  return words.map((w) => w[0].toUpperCase()).join();
+}

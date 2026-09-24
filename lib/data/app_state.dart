@@ -46,6 +46,11 @@ class AppState extends ChangeNotifier {
   /// Copie du planning dans l'agenda du téléphone.
   bool get calendarEnabled => CalendarMirror.enabled(_prefs);
 
+  /// Disposition du planning choisie (jour, 3 jours, semaine, liste).
+  String? get planningLayout => _prefs.getString('planningLayout');
+
+  Future<void> setPlanningLayout(String name) => _prefs.setString('planningLayout', name);
+
   Timer? _keepAlive;
 
   static Future<AppState> create() async {

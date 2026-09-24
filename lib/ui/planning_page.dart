@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../data/app_state.dart';
 import '../data/models.dart';
 import '../data/notifications.dart';
 import '../main.dart';
 import 'expressive.dart';
 import 'format.dart';
+import 'planning_views.dart';
 import 'seance_sheet.dart';
 import 'theme.dart';
 
+/// Un lundi : les pages "jour" et "semaine" comptent à partir de là.
 final DateTime _origin = DateTime.utc(2024, 1, 1);
 
 int _pageOf(DateTime day) => DateTime.utc(day.year, day.month, day.day).difference(_origin).inDays;
@@ -18,6 +21,19 @@ DateTime _dayOf(int page) {
   final d = _origin.add(Duration(days: page));
   return DateTime(d.year, d.month, d.day);
 }
+
+/// Jours ouvrés numérotés depuis l'origine (le week-end compte comme le lundi suivant).
+int _workdayOf(DateTime day) {
+  final page = _pageOf(day);
+  final week = page ~/ 7;
+  final dow = page % 7;
+  return dow >= 5 ? (week + 1) * 5 : week * 5 + dow;
+}
+
+DateTime _dateOfWorkday(int workday) => _dayOf(workday ~/ 5 * 7 + workday % 5);
+
+/// Page de départ des vues "3 jours" : on peut glisser dans les deux sens.
+const _threeDaysHome = 10000;
 
 class PlanningPage extends StatefulWidget {
   const PlanningPage({super.key});
@@ -28,7 +44,11 @@ class PlanningPage extends StatefulWidget {
 
 class PlanningPageState extends State<PlanningPage> {
   late DateTime _selected = _initialDay();
-  late final PageController _pages = PageController(initialPage: _pageOf(_selected));
+  late PlanningLayout _layout = PlanningLayout.fromName(AppScope.read(context).planningLayout);
+  late PageController _pages = PageController(initialPage: _initialPage(_selected));
+
+  /// Vue "3 jours" : premier jour ouvré de la page [_threeDaysHome].
+  late int _threeAnchor = _workdayOf(_selected);
 
   /// Le week-end, on ouvre directement le lundi suivant.
   static DateTime _initialDay() {
@@ -41,9 +61,7 @@ class PlanningPageState extends State<PlanningPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) AppScope.read(context).prefetchSeanceDetails(_selected);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefetch());
   }
 
   @override
@@ -52,18 +70,112 @@ class PlanningPageState extends State<PlanningPage> {
     super.dispose();
   }
 
+  int _initialPage(DateTime day) => switch (_layout) {
+        PlanningLayout.day || PlanningLayout.list => _pageOf(day),
+        PlanningLayout.week => _pageOf(day) ~/ 7,
+        PlanningLayout.threeDays => _threeDaysHome,
+      };
+
+  /// Jours affichés par une page de la vue courante.
+  List<DateTime> _daysOfPage(int page) {
+    final state = AppScope.read(context);
+    switch (_layout) {
+      case PlanningLayout.week:
+        final monday = _dayOf(page * 7);
+        final days = [for (var i = 0; i < 7; i++) DateUtils.addDaysToDate(monday, i)];
+        // Samedi et dimanche seulement s'il y a cours.
+        return days.where((d) => d.weekday <= DateTime.friday || state.seancesOn(d).isNotEmpty).toList();
+      case PlanningLayout.threeDays:
+        final start = _threeAnchor + 3 * (page - _threeDaysHome);
+        return [for (var i = 0; i < 3; i++) _dateOfWorkday(start + i)];
+      case PlanningLayout.day:
+      case PlanningLayout.list:
+        return [_dayOf(page)];
+    }
+  }
+
+  List<DateTime> get _visibleDays => _daysOfPage(_pages.hasClients ? _pages.page!.round() : _pages.initialPage);
+
+  void _prefetch() {
+    if (!mounted || _layout == PlanningLayout.list) return;
+    final state = AppScope.read(context);
+    // En série : un jour après l'autre, sans multiplier les requêtes en parallèle.
+    Future.forEach(_daysOfPage(_pages.hasClients ? _pages.page!.round() : _pages.initialPage), state.prefetchSeanceDetails);
+  }
+
+  void _setLayout(PlanningLayout layout) {
+    if (layout == _layout) return;
+    AppScope.read(context).setPlanningLayout(layout.name);
+    setState(() {
+      _layout = layout;
+      _threeAnchor = _workdayOf(_selected);
+      _pages.dispose();
+      _pages = PageController(initialPage: _initialPage(_selected));
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefetch());
+  }
+
   /// Ouvre le jour demandé par une notification, et la séance si elle existe encore.
   Future<void> open(OpenRequest request) async {
     final state = AppScope.read(context);
     await state.reloadCache();
     if (!mounted) return;
-    _pages.jumpToPage(_pageOf(DateUtils.dateOnly(request.day)));
+    _jumpTo(DateUtils.dateOnly(request.day));
     final seance = state.seances.where((s) => s.uid == request.uid).firstOrNull;
     if (seance != null) await showSeanceSheet(context, seance);
   }
 
+  void _jumpTo(DateTime day) {
+    setState(() => _selected = day);
+    if (_layout == PlanningLayout.threeDays) {
+      setState(() => _threeAnchor = _workdayOf(day));
+      if (_pages.hasClients) _pages.jumpToPage(_threeDaysHome);
+    } else if (_layout != PlanningLayout.list && _pages.hasClients) {
+      _pages.jumpToPage(_initialPage(day));
+    }
+  }
+
   void _goTo(DateTime day) {
-    _pages.animateToPage(_pageOf(day), duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic);
+    if (_layout == PlanningLayout.threeDays) return _jumpTo(day);
+    _pages.animateToPage(_initialPage(day), duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic);
+  }
+
+  /// Depuis une grille : ouvre le jour touché en vue Jour.
+  void _openDay(DateTime day) {
+    _selected = day;
+    _setLayout(PlanningLayout.day);
+  }
+
+  void _onPageChanged(int page) {
+    final days = _daysOfPage(page);
+    final today = DateUtils.dateOnly(DateTime.now());
+    setState(() => _selected = days.contains(today) ? today : days.first);
+    _prefetch();
+  }
+
+  (String, String) _titles(DateTime today) {
+    switch (_layout) {
+      case PlanningLayout.day:
+        return (
+          capitalize(_selected == today ? "Aujourd'hui" : DateFormat.EEEE().format(_selected)),
+          DateFormat.yMMMMd().format(_selected),
+        );
+      case PlanningLayout.list:
+        final count = AppScope.read(context).seances.where((s) => s.end.isAfter(DateTime.now())).length;
+        return ('À venir', count == 0 ? 'Aucun cours' : '$count cours');
+      case PlanningLayout.week:
+      case PlanningLayout.threeDays:
+        final days = _visibleDays;
+        final first = days.first;
+        final last = days.last;
+        final title = first.month == last.month
+            ? capitalize(DateFormat.yMMMM().format(first))
+            : '${capitalize(DateFormat.MMM().format(first))} – ${DateFormat.yMMM().format(last)}';
+        final range = _layout == PlanningLayout.week
+            ? 'Semaine du ${DateFormat.MMMd().format(first)} au ${DateFormat.MMMd().format(last)}'
+            : 'Du ${DateFormat.MMMEd().format(first)} au ${DateFormat.MMMEd().format(last)}';
+        return (title, range);
+    }
   }
 
   @override
@@ -72,6 +184,12 @@ class PlanningPageState extends State<PlanningPage> {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final today = DateUtils.dateOnly(DateTime.now());
+    final (title, subtitle) = _titles(today);
+    final showsToday = switch (_layout) {
+      PlanningLayout.day => _selected == today,
+      PlanningLayout.list => true,
+      _ => _visibleDays.contains(today) || today.weekday > DateTime.friday,
+    };
 
     return SafeArea(
       bottom: false,
@@ -79,7 +197,7 @@ class PlanningPageState extends State<PlanningPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 12, 0),
+            padding: const EdgeInsets.fromLTRB(24, 16, 4, 0),
             child: Row(
               children: [
                 Expanded(
@@ -97,33 +215,38 @@ class PlanningPageState extends State<PlanningPage> {
                       ),
                     ),
                     child: Column(
-                      key: ValueKey(_selected),
+                      key: ValueKey('$_layout$title$subtitle'),
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          capitalize(_selected == today ? 'Aujourd\'hui' : DateFormat.EEEE().format(_selected)),
-                          style: text.headlineLarge,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(title, style: text.headlineLarge, maxLines: 1),
                         ),
                         Text(
-                          DateFormat.yMMMMd().format(_selected),
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: text.titleMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
                   ),
                 ),
-                if (_selected != today)
+                if (!showsToday)
                   IconButton.filledTonal(
-                    tooltip: 'Aujourd\'hui',
+                    tooltip: "Aujourd'hui",
                     onPressed: () => _goTo(today),
                     icon: const Icon(Icons.today_rounded),
                   ),
+                _LayoutButton(layout: _layout, onChanged: _setLayout),
                 _SyncButton(),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          _WeekStrip(selected: _selected, onSelect: _goTo, hasCourses: (d) => state.seancesOn(d).isNotEmpty),
+          if (_layout == PlanningLayout.day)
+            _WeekStrip(selected: _selected, onSelect: _goTo, hasCourses: (d) => state.seancesOn(d).isNotEmpty),
           if (state.syncError != null && state.seances.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -133,18 +256,81 @@ class PlanningPageState extends State<PlanningPage> {
                 textAlign: TextAlign.center,
               ),
             ),
-          Expanded(
-            child: PageView.builder(
-              controller: _pages,
-              onPageChanged: (page) {
-                setState(() => _selected = _dayOf(page));
-                AppScope.read(context).prefetchSeanceDetails(_selected);
-              },
-              itemBuilder: (context, page) => _DayView(day: _dayOf(page)),
-            ),
-          ),
+          Expanded(child: _body(state)),
         ],
       ),
+    );
+  }
+
+  Widget _body(AppState state) {
+    if (state.seances.isEmpty && state.syncing) {
+      return const Center(child: ExpressiveLoader());
+    }
+    if (state.seances.isEmpty && state.syncError != null) {
+      return EmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'Planning indisponible',
+        message: state.syncError,
+        action: FilledButton.tonal(onPressed: () => state.sync(force: true), child: const Text('Réessayer')),
+      );
+    }
+    if (_layout == PlanningLayout.list) return const PlanningList();
+    return PageView.builder(
+      key: ValueKey(_layout),
+      controller: _pages,
+      onPageChanged: _onPageChanged,
+      itemBuilder: (context, page) => switch (_layout) {
+        PlanningLayout.day => _DayView(day: _dayOf(page)),
+        _ => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: PlanningGrid(
+              days: _daysOfPage(page),
+              compact: _layout == PlanningLayout.week,
+              onOpenDay: _openDay,
+            ),
+          ),
+      },
+    );
+  }
+}
+
+class _LayoutButton extends StatelessWidget {
+  const _LayoutButton({required this.layout, required this.onChanged});
+
+  final PlanningLayout layout;
+  final ValueChanged<PlanningLayout> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return PopupMenuButton<PlanningLayout>(
+      tooltip: 'Disposition : ${layout.label}',
+      icon: Icon(layout.icon),
+      initialValue: layout,
+      onSelected: onChanged,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      itemBuilder: (context) => [
+        for (final l in PlanningLayout.values)
+          PopupMenuItem(
+            value: l,
+            child: Row(
+              children: [
+                Icon(l.icon, color: l == layout ? scheme.primary : scheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l.label,
+                    style: TextStyle(
+                      color: l == layout ? scheme.primary : null,
+                      fontWeight: l == layout ? FontWeight.w700 : null,
+                    ),
+                  ),
+                ),
+                if (l == layout) Icon(Icons.check_rounded, size: 18, color: scheme.primary),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -283,18 +469,6 @@ class _DayView extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final seances = state.seancesOn(day);
-
-    if (state.seances.isEmpty && state.syncing) {
-      return const Center(child: ExpressiveLoader());
-    }
-    if (state.seances.isEmpty && state.syncError != null) {
-      return EmptyState(
-        icon: Icons.cloud_off_rounded,
-        title: 'Planning indisponible',
-        message: state.syncError,
-        action: FilledButton.tonal(onPressed: () => state.sync(force: true), child: const Text('Réessayer')),
-      );
-    }
 
     return RefreshIndicator(
       onRefresh: () => state.sync(force: true),
