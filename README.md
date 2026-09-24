@@ -18,7 +18,7 @@ NetYParéo contient tout ce dont un apprenti a besoin : l'emploi du temps, le ca
 
 ### 🚀 Fonctionnalités
 
-Déjà dans l'application (version 0.2, Android) :
+Déjà dans l'application (version 0.3, Android) :
 
 - **Connexion** avec ton compte NetYParéo, reconnexion automatique quand la session expire.
 - **Emploi du temps** consultable hors ligne, en quatre dispositions au choix : **jour** (la semaine en haut, le cours en cours mis en avant, les pauses affichées), **3 jours** et **semaine** (grille horaire, un bloc coloré par cours), **liste** (tous les cours à venir, avec les périodes sans cours au centre).
