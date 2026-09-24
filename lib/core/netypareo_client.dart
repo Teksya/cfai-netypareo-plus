@@ -197,6 +197,12 @@ class NetypareoClient {
   Future<Document> postHtml(String path, Map<String, dynamic> data) async =>
       (await _authed(() => _rawPost(path, data))).document;
 
+  /// Texte brut d'une page protégée, pour le cache (voir `PageCache`).
+  Future<String> getText(String path) async => (await _authed(() => _rawGet(path))).text;
+
+  Future<String> postText(String path, Map<String, dynamic> data) async =>
+      (await _authed(() => _rawPost(path, data))).text;
+
   Future<dynamic> getJson(String path) async {
     final page = await _authed(() => _rawGet(path, ajax: true));
     return jsonDecode(page.text);

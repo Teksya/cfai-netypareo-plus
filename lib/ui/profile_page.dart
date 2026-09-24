@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../main.dart';
+import 'documents_page.dart';
 import 'expressive.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -124,6 +125,33 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                Text('Mes documents', style: text.titleLarge),
+                const SizedBox(height: 12),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.folder_rounded),
+                        title: const Text('Documents'),
+                        subtitle: const Text('Bulletins, conventions et fichiers déposés par le CFA'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => const DocumentsPage()),
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.swap_horiz_rounded),
+                        title: const Text('Documents de liaison'),
+                        subtitle: const Text('Échanges entre le CFA, ton entreprise et toi'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => const DocsLiaisonPage()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Text('Bientôt disponible', style: text.titleLarge),
                 const SizedBox(height: 4),
                 Text(
@@ -197,9 +225,7 @@ class _UpcomingGrid extends StatelessWidget {
 
   static const _features = [
     (Icons.grade_rounded, 'Notes et bulletin'),
-    (Icons.folder_rounded, 'Documents'),
     (Icons.date_range_rounded, 'Calendrier centre / entreprise'),
-    (Icons.swap_horiz_rounded, 'Documents de liaison'),
   ];
 
   @override

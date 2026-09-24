@@ -27,13 +27,16 @@ Déjà dans l'application (version 0.1, Android) :
 - **Pièces jointes** : téléchargées puis ouvertes dans l'application adaptée du téléphone.
 - **Travail à faire** : devoirs rangés par date d'échéance, filtre par matière, consignes et pièces jointes, bouton « Fait » qui met à jour NetYParéo.
 - **Absences**.
+- **Documents** : l'espace documentaire (bulletins, préinscription…), dossier par dossier, fichiers ouverts d'un appui.
+- **Documents de liaison** : les échanges avec le CFA et l'entreprise, avec ceux à retourner mis en avant.
+- **Tout s'affiche tout de suite** : chaque écran montre la dernière version enregistrée, se met à jour en arrière-plan et se redessine si quelque chose a changé. Hors ligne, un bandeau le signale.
 - **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
 - **Copie dans l'agenda du téléphone** (option) : un agenda "NetYParéo+" apparaît dans Google Agenda, Samsung Agenda, etc., et suit chaque synchronisation. Le couper supprime cet agenda, les autres ne sont jamais touchés.
 - Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
 
 Prévu (visible et grisé dans l'onglet "Plus") :
 
-- **Notes et bulletin**, **documents**, **calendrier centre / entreprise**, **documents de liaison**.
+- **Notes et bulletin**, **calendrier centre / entreprise**.
 
 ### 📸 Aperçu
 
@@ -58,8 +61,9 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 2. **Emploi du temps** : le flux iCalendar personnel de l'apprenant. Il fonctionne sans session, ce qui permet la synchronisation en arrière-plan.
 3. **Le reste** : du JSON quand le site en fournit (planning, jours de cours, calendrier), sinon la lecture des pages HTML. Les pages sont encodées en `windows-1252`, le JSON en UTF-8.
 4. **Alertes** : une tâche WorkManager relit le flux iCal toutes les 15 minutes (le minimum d'Android), compare avec la version enregistrée séance par séance, et envoie une notification locale par changement. Rien ne passe par un serveur tiers.
-5. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
-6. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
+5. **Cache** : chaque page lue sur le site est gardée sur le téléphone (300 pages au plus, effacées à la déconnexion). L'écran s'affiche avec elle, puis avec la version à jour dès qu'elle arrive.
+6. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
+7. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
 
 ### 🗂️ Structure du code
 
@@ -67,7 +71,7 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 lib/
 ├── core/            Accès réseau : cookies, décodage windows-1252, connexion
 ├── data/            Modèles, lecture des pages (parsers), état de l'application et cache
-└── ui/              Écrans (planning, travail, cahier, absences, plus) et composants Material 3 Expressive
+└── ui/              Écrans (planning, travail, cahier, absences, documents, plus) et composants Material 3 Expressive
 test/                Tests des parsers, sur des données fictives
 tool/gen_logo.dart   Génère le logo en SVG
 ```

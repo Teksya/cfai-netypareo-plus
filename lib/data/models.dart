@@ -186,3 +186,59 @@ class TravailAFaire {
   /// Le formateur attend un rendu (fichier) : ça se fait sur le site.
   final bool toHandIn;
 }
+
+/// Un dossier ou un fichier de l'espace Documents.
+class DocEntry {
+  const DocEntry({
+    required this.name,
+    required this.isFolder,
+    this.count,
+    this.fsParams,
+    this.path,
+    this.download,
+    this.type = '',
+    this.modified = '',
+    this.kind = '',
+  });
+
+  final String name;
+  final bool isFolder;
+
+  /// Nombre de fichiers annoncé par le site pour un dossier, s'il l'affiche.
+  final int? count;
+
+  /// Pour ouvrir un dossier : paramètres signés et chemin (base64) fournis par le site.
+  final String? fsParams;
+  final String? path;
+
+  /// Pour un fichier : lien de téléchargement.
+  final DocumentLink? download;
+  final String type;
+  final String modified;
+
+  /// Type d'icône du site (pdf, word, image...).
+  final String kind;
+}
+
+/// Un document de liaison (envoyé par le CFA ou l'entreprise, parfois à retourner).
+class DocLiaison {
+  const DocLiaison({
+    required this.code,
+    required this.name,
+    this.created,
+    this.sender = '',
+    this.toReturn = false,
+    this.read = false,
+    this.returned = false,
+    this.due,
+  });
+
+  final int code;
+  final String name;
+  final DateTime? created;
+  final String sender;
+  final bool toReturn;
+  final bool read;
+  final bool returned;
+  final DateTime? due;
+}

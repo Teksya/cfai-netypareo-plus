@@ -5,6 +5,7 @@ import 'package:open_filex/open_filex.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
 import '../main.dart';
+import 'cached_view.dart';
 import 'expressive.dart';
 import 'format.dart';
 import 'theme.dart';
@@ -34,14 +35,6 @@ class _SeanceSheet extends StatefulWidget {
 }
 
 class _SeanceSheetState extends State<_SeanceSheet> {
-  Future<SeanceDetail>? _detail;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final code = widget.seance.codeSeance;
-    if (_detail == null && code != null) _detail = AppScope.read(context).seanceDetail(code);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +44,7 @@ class _SeanceSheetState extends State<_SeanceSheet> {
     final scheme = theme.colorScheme;
     final colors = subjectColors(s.subject, theme.brightness);
     final hm = DateFormat.Hm();
+    final code = s.codeSeance;
 
     return ListView(
       controller: widget.controller,
@@ -84,30 +78,44 @@ class _SeanceSheetState extends State<_SeanceSheet> {
           ],
         ),
         const SizedBox(height: 16),
-        if (_detail == null)
+        if (code == null)
           _BasicInfos(seance: s)
         else
-          FutureBuilder<SeanceDetail>(
-            future: _detail,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Padding(padding: EdgeInsets.all(32), child: Center(child: ExpressiveLoader()));
-              }
-              if (snapshot.hasError) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _BasicInfos(seance: s),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Détail indisponible : ${AppState.errorMessage(snapshot.error!)}',
-                      style: text.bodySmall?.copyWith(color: scheme.error),
+          CachedView<SeanceDetail>(
+            load: () => AppScope.read(context).seanceDetail(code),
+            // Pas encore de détail enregistré : les infos du planning en attendant.
+            loading: (context) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _BasicInfos(seance: s),
+                const Padding(padding: EdgeInsets.all(24), child: Center(child: ExpressiveLoader())),
+              ],
+            ),
+            failed: (context, error, retry) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _BasicInfos(seance: s),
+                const SizedBox(height: 12),
+                Text(
+                  'Détail indisponible : ${AppState.errorMessage(error)}',
+                  style: text.bodySmall?.copyWith(color: scheme.error),
+                ),
+              ],
+            ),
+            builder: (context, detail, status) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _DetailView(detail: detail),
+                if (status.error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      'Hors ligne : dernière version enregistrée.',
+                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                     ),
-                  ],
-                );
-              }
-              return _DetailView(detail: snapshot.data!);
-            },
+                  ),
+              ],
+            ),
           ),
       ],
     );
@@ -205,35 +213,8 @@ class _AttachmentChipState extends State<AttachmentChip> {
   Future<void> _open() async {
     if (_busy) return;
     setState(() => _busy = true);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final download = await AppScope.read(context).downloadDocument(widget.link);
-      final result = await OpenFilex.open(download.file.path, type: download.mimeType);
-      if (result.type == ResultType.noAppToOpen) {
-        messenger.showSnackBar(SnackBar(
-          content: Text('Aucune application pour ouvrir ce type de fichier (${widget.link.name.split('.').last}).'),
-        ));
-      } else if (result.type != ResultType.done) {
-        messenger.showSnackBar(SnackBar(content: Text('Ouverture impossible : ${result.message}')));
-      }
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(AppState.errorMessage(e))));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  static IconData _icon(String name) {
-    final ext = name.split('.').last.toLowerCase();
-    return switch (ext) {
-      'pdf' => Icons.picture_as_pdf_rounded,
-      'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' => Icons.image_rounded,
-      'doc' || 'docx' || 'odt' || 'txt' => Icons.description_rounded,
-      'xls' || 'xlsx' || 'ods' || 'csv' => Icons.table_chart_rounded,
-      'ppt' || 'pptx' || 'odp' => Icons.slideshow_rounded,
-      'zip' || 'rar' || '7z' => Icons.folder_zip_rounded,
-      _ => Icons.attach_file_rounded,
-    };
+    await openDocument(context, widget.link);
+    if (mounted) setState(() => _busy = false);
   }
 
   @override
@@ -242,7 +223,7 @@ class _AttachmentChipState extends State<AttachmentChip> {
       child: ActionChip(
         avatar: _busy
             ? const SizedBox.square(dimension: 18, child: ExpressiveLoader(size: 18))
-            : Icon(_icon(widget.link.name), size: 18),
+            : Icon(documentIcon(widget.link.name), size: 18),
         label: Text(widget.link.name, overflow: TextOverflow.ellipsis),
         tooltip: 'Ouvrir ${widget.link.name}',
         onPressed: _open,
@@ -306,4 +287,35 @@ class CahierCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Télécharge un document de NetYParéo puis l'ouvre dans l'application adaptée du téléphone.
+Future<void> openDocument(BuildContext context, DocumentLink link) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final download = await AppScope.read(context).downloadDocument(link);
+    final result = await OpenFilex.open(download.file.path, type: download.mimeType);
+    if (result.type == ResultType.noAppToOpen) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Aucune application pour ouvrir ce type de fichier (${link.name.split('.').last}).'),
+      ));
+    } else if (result.type != ResultType.done) {
+      messenger.showSnackBar(SnackBar(content: Text('Ouverture impossible : ${result.message}')));
+    }
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(AppState.errorMessage(e))));
+  }
+}
+
+IconData documentIcon(String name) {
+  final ext = name.split('.').last.toLowerCase();
+  return switch (ext) {
+    'pdf' => Icons.picture_as_pdf_rounded,
+    'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' => Icons.image_rounded,
+    'doc' || 'docx' || 'odt' || 'txt' => Icons.description_rounded,
+    'xls' || 'xlsx' || 'ods' || 'csv' => Icons.table_chart_rounded,
+    'ppt' || 'pptx' || 'odp' => Icons.slideshow_rounded,
+    'zip' || 'rar' || '7z' => Icons.folder_zip_rounded,
+    _ => Icons.attach_file_rounded,
+  };
 }

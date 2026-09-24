@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
 import '../main.dart';
+import 'cached_view.dart';
 import 'expressive.dart';
 import 'format.dart';
 import 'seance_sheet.dart';
@@ -19,119 +20,142 @@ class CahierPage extends StatefulWidget {
 }
 
 class _CahierPageState extends State<CahierPage> {
-  late Future<List<CahierEntry>> _future = AppScope.read(context).cahierDeTextes();
   String? _subject;
   bool _upcoming = false;
 
   /// Plus proches d'aujourd'hui en premier (la plus récente, ou la prochaine), sinon l'inverse.
   bool _nearestFirst = true;
 
-  Future<void> _refresh() async {
-    final future = AppScope.read(context).cahierDeTextes();
-    setState(() {
-      _future = future;
-    });
-    await future.catchError((_) => <CahierEntry>[]);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        edgeOffset: 80,
-        child: FutureBuilder<List<CahierEntry>>(
-          future: _future,
-          builder: (context, snapshot) {
-            final entries = snapshot.data ?? const <CahierEntry>[];
-            final loading = snapshot.connectionState != ConnectionState.done;
-            return CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: PageHeader(
-                    title: 'Cahier de textes',
-                    subtitle: loading || entries.isEmpty ? null : '${entries.length} séances saisies',
-                  ),
+      body: CachedView<List<CahierEntry>>(
+        load: AppScope.read(context).cahierDeTextes,
+        loading: (context) => const CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(child: PageHeader(title: 'Cahier de textes')),
+            SliverFillRemaining(child: Center(child: ExpressiveLoader())),
+          ],
+        ),
+        failed: (context, error, retry) => RefreshIndicator(
+          onRefresh: retry,
+          edgeOffset: 80,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              const SliverToBoxAdapter(child: PageHeader(title: 'Cahier de textes')),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: EmptyState(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Chargement impossible',
+                  message: AppState.errorMessage(error),
+                  action: FilledButton.tonal(onPressed: retry, child: const Text('Réessayer')),
                 ),
-                if (loading)
-                  const SliverFillRemaining(child: Center(child: ExpressiveLoader()))
-                else if (snapshot.hasError)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: EmptyState(
-                      icon: Icons.cloud_off_rounded,
-                      title: 'Chargement impossible',
-                      message: AppState.errorMessage(snapshot.error!),
-                      action: FilledButton.tonal(onPressed: _refresh, child: const Text('Réessayer')),
+              ),
+            ],
+          ),
+        ),
+        builder: (context, entries, status) => RefreshIndicator(
+          onRefresh: status.refresh,
+          edgeOffset: 80,
+          child: Builder(
+            builder: (context) {
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: PageHeader(
+                      title: 'Cahier de textes',
+                      subtitle: entries.isEmpty ? null : '${entries.length} séances saisies',
                     ),
-                  )
-                else if (entries.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: EmptyState(
-                      icon: Icons.menu_book_rounded,
-                      title: 'Cahier vide',
-                      message: 'Aucun contenu saisi par les formateurs sur les dernières semaines.',
-                    ),
-                  )
-                else ...() {
-                  final now = DateTime.now();
-                  final past = entries.where((e) => e.date == null || !e.date!.isAfter(now)).toList();
-                  // Les formateurs saisissent parfois l'année entière à l'avance : à venir = la plus proche d'abord.
-                  final upcoming = entries.where((e) => e.date != null && e.date!.isAfter(now)).toList().reversed.toList();
-                  final nearest = _upcoming ? upcoming : past;
-                  final shown = _nearestFirst ? nearest : nearest.reversed.toList();
-                  final filtered = shown.where((e) => _subject == null || e.subject == _subject).toList();
-                  return [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: SegmentedButton<bool>(
-                          segments: [
-                            ButtonSegment(value: false, icon: const Icon(Icons.history_rounded), label: Text('Passées (${past.length})')),
-                            ButtonSegment(value: true, icon: const Icon(Icons.upcoming_rounded), label: Text('À venir (${upcoming.length})')),
-                          ],
-                          selected: {_upcoming},
-                          showSelectedIcon: false,
-                          onSelectionChanged: (s) => setState(() {
-                            _upcoming = s.first;
-                            _subject = null;
-                          }),
-                        ),
+                  ),
+                  SliverToBoxAdapter(child: CacheBanner(status: status)),
+                  if (entries.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyState(
+                        icon: Icons.menu_book_rounded,
+                        title: 'Cahier vide',
+                        message: 'Aucun contenu saisi par les formateurs sur les dernières semaines.',
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _SubjectFilter(entries: shown, selected: _subject, onSelect: (s) => setState(() => _subject = s)),
-                    ),
-                    SliverToBoxAdapter(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                          child: TextButton.icon(
-                            onPressed: () => setState(() => _nearestFirst = !_nearestFirst),
-                            icon: const Icon(Icons.swap_vert_rounded),
-                            label: Text(_nearestFirst ? 'Plus proches d\'abord' : 'Plus lointaines d\'abord'),
+                    )
+                  else
+                    ...() {
+                      final now = DateTime.now();
+                      final past = entries.where((e) => e.date == null || !e.date!.isAfter(now)).toList();
+                      // Les formateurs saisissent parfois l'année entière à l'avance : à venir = la plus proche d'abord.
+                      final upcoming = entries
+                          .where((e) => e.date != null && e.date!.isAfter(now))
+                          .toList()
+                          .reversed
+                          .toList();
+                      final nearest = _upcoming ? upcoming : past;
+                      final shown = _nearestFirst ? nearest : nearest.reversed.toList();
+                      final filtered = shown.where((e) => _subject == null || e.subject == _subject).toList();
+                      return [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: SegmentedButton<bool>(
+                              segments: [
+                                ButtonSegment(
+                                  value: false,
+                                  icon: const Icon(Icons.history_rounded),
+                                  label: Text('Passées (${past.length})'),
+                                ),
+                                ButtonSegment(
+                                  value: true,
+                                  icon: const Icon(Icons.upcoming_rounded),
+                                  label: Text('À venir (${upcoming.length})'),
+                                ),
+                              ],
+                              selected: {_upcoming},
+                              showSelectedIcon: false,
+                              onSelectionChanged: (s) => setState(() {
+                                _upcoming = s.first;
+                                _subject = null;
+                              }),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    if (filtered.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyState(
-                          icon: _upcoming ? Icons.upcoming_rounded : Icons.history_rounded,
-                          title: _upcoming ? 'Rien de prévu' : 'Rien pour l\'instant',
+                        SliverToBoxAdapter(
+                          child: _SubjectFilter(
+                            entries: shown,
+                            selected: _subject,
+                            onSelect: (s) => setState(() => _subject = s),
+                          ),
                         ),
-                      )
-                    else
-                      ..._timeline(filtered),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  ];
-                }(),
-              ],
-            );
-          },
+                        SliverToBoxAdapter(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                              child: TextButton.icon(
+                                onPressed: () => setState(() => _nearestFirst = !_nearestFirst),
+                                icon: const Icon(Icons.swap_vert_rounded),
+                                label: Text(_nearestFirst ? 'Plus proches d\'abord' : 'Plus lointaines d\'abord'),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (filtered.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: EmptyState(
+                              icon: _upcoming ? Icons.upcoming_rounded : Icons.history_rounded,
+                              title: _upcoming ? 'Rien de prévu' : 'Rien pour l\'instant',
+                            ),
+                          )
+                        else
+                          ..._timeline(filtered),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ];
+                    }(),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -152,7 +176,10 @@ class _CahierPageState extends State<CahierPage> {
           sliver: SliverList.separated(
             itemCount: day.value.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) => EnterAnimation(index: index++, child: _EntryTile(entry: day.value[i])),
+            itemBuilder: (context, i) => EnterAnimation(
+              index: index++,
+              child: _EntryTile(entry: day.value[i]),
+            ),
           ),
         ),
       ],
@@ -248,7 +275,10 @@ class _DayHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(d == null ? 'Date inconnue' : capitalize(DateFormat.MMMMEEEEd().format(d)), style: text.titleMedium),
+                Text(
+                  d == null ? 'Date inconnue' : capitalize(DateFormat.MMMMEEEEd().format(d)),
+                  style: text.titleMedium,
+                ),
                 if (d != null) Text(relative, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               ],
             ),
@@ -278,10 +308,10 @@ class _EntryTile extends StatelessWidget {
     final preview = entry.content == entry.title
         ? ''
         : entry.content
-            .split('\n')
-            .map((line) => line.replaceFirst(RegExp(r'^[•\-\s]+'), '').trim())
-            .where((line) => line.isNotEmpty && line != entry.title)
-            .join(' · ');
+              .split('\n')
+              .map((line) => line.replaceFirst(RegExp(r'^[•\-\s]+'), '').trim())
+              .where((line) => line.isNotEmpty && line != entry.title)
+              .join(' · ');
 
     return SpringPress(
       pressedScale: 0.97,
@@ -332,7 +362,9 @@ class _EntryTile extends StatelessWidget {
                             Icon(Icons.attach_file_rounded, size: 16, color: scheme.primary),
                             const SizedBox(width: 4),
                             Text(
-                              entry.resources.length == 1 ? '1 pièce jointe' : '${entry.resources.length} pièces jointes',
+                              entry.resources.length == 1
+                                  ? '1 pièce jointe'
+                                  : '${entry.resources.length} pièces jointes',
                               style: text.labelMedium?.copyWith(color: scheme.primary),
                             ),
                           ],

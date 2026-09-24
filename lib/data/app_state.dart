@@ -4,9 +4,13 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:html/dom.dart' show Document;
+import 'package:html/parser.dart' as html_parser;
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/netypareo_client.dart';
+import '../core/page_cache.dart';
 import 'background_sync.dart';
 import 'calendar_mirror.dart';
 import 'models.dart';
@@ -17,7 +21,7 @@ enum AuthStatus { loading, loggedOut, loggedIn }
 
 /// État global de l'application : session, profil, emploi du temps en cache.
 class AppState extends ChangeNotifier {
-  AppState._(this._client, this._prefs);
+  AppState._(this._client, this._prefs, this._pages);
 
   static const _secure = kSecure;
   static const _kUser = 'username';
@@ -27,6 +31,7 @@ class AppState extends ChangeNotifier {
 
   final NetypareoClient _client;
   final SharedPreferences _prefs;
+  final PageCache _pages;
 
   AuthStatus status = AuthStatus.loading;
   Profile? profile;
@@ -44,7 +49,11 @@ class AppState extends ChangeNotifier {
   Timer? _keepAlive;
 
   static Future<AppState> create() async {
-    final state = AppState._(await NetypareoClient.create(), await SharedPreferences.getInstance());
+    final state = AppState._(
+      await NetypareoClient.create(),
+      await SharedPreferences.getInstance(),
+      await PageCache.open(),
+    );
     state._client.onSessionExpired = state._relogin;
     unawaited(state._restore());
     return state;
@@ -115,6 +124,7 @@ class AppState extends ChangeNotifier {
       // Déconnexion locale même sans réseau.
     }
     await _secure.deleteAll();
+    await _pages.clear();
     await _prefs.clear();
     profile = null;
     seances = const [];
@@ -231,25 +241,93 @@ class AppState extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Données à la demande (session requise)
 
-  Future<SeanceDetail> seanceDetail(int codeSeance) async =>
-      parseSeanceDetail(await _client.getHtml('/planning/seance/$codeSeance/7500/${profile!.codeApprenant}'));
+  /// Version enregistrée d'abord (affichage immédiat, même hors ligne), puis version à jour.
+  /// Si le réseau échoue après la version enregistrée, le flux se termine par l'erreur :
+  /// l'écran garde les données et signale qu'elles ne sont peut-être plus à jour.
+  Stream<T> _cached<T>(String key, Future<String> Function() fetch, T Function(String text) parse) async* {
+    final saved = await _pages.read(key);
+    if (saved != null) {
+      try {
+        yield parse(saved);
+      } catch (e) {
+        debugPrint('Cache illisible ($key) : $e');
+      }
+    }
+    final fresh = await fetch();
+    final value = parse(fresh);
+    await _pages.write(key, fresh);
+    yield value;
+  }
 
-  Future<List<Absence>> absences() async => parseAbsences(await _client.getHtml('/apprenant/assiduite/'));
+  static T Function(String) _html<T>(T Function(Document doc) parse) => (text) => parse(html_parser.parse(text));
 
-  Future<List<CahierEntry>> cahierDeTextes() async =>
-      parseCahierDeTextes(await _client.getHtml('/pedagogie/apprenant/bilan/consultation-libre-cdt/'));
+  Stream<SeanceDetail> seanceDetail(int codeSeance) => _cached(
+        'seance-$codeSeance',
+        () => _client.getText('/planning/seance/$codeSeance/7500/${profile!.codeApprenant}'),
+        _html((d) => parseSeanceDetail(d)),
+      );
 
-  Future<List<TravailAFaire>> travailAFaire() async => parseTravailAFaire(await _client.getHtml('/travail-a-faire/'));
+  Stream<List<Absence>> absences() =>
+      _cached('absences', () => _client.getText('/apprenant/assiduite/'), _html((d) => parseAbsences(d)));
+
+  Stream<List<CahierEntry>> cahierDeTextes() => _cached(
+        'cahier',
+        () => _client.getText('/pedagogie/apprenant/bilan/consultation-libre-cdt/'),
+        _html((d) => parseCahierDeTextes(d)),
+      );
+
+  Stream<List<TravailAFaire>> travailAFaire() =>
+      _cached('travail', () => _client.getText('/travail-a-faire/'), _html((d) => parseTravailAFaire(d)));
 
   /// Écrit sur NetYParéo : le travail passe en "fait" (annulable).
-  Future<void> declarerFait(TravailAFaire taf) => _client.postHtml('/travail-a-faire/declarer-fait/', {
+  Future<void> declarerFait(TravailAFaire taf) => _client.postText('/travail-a-faire/declarer-fait/', {
         'codeNetTravailAFaire': taf.code,
         'codeApprenant': profile!.codeApprenant,
       });
 
-  Future<void> annulerFait(TravailAFaire taf) => _client.postHtml('/travail-a-faire/supprimer-travail/', {
+  Future<void> annulerFait(TravailAFaire taf) => _client.postText('/travail-a-faire/supprimer-travail/', {
         'codeNetTravailFaitPar': taf.codeTravailFait,
       });
+
+  /// Contenu d'un dossier de l'espace Documents ; [folder] null pour la racine.
+  /// La racine demande d'abord la page de l'explorateur pour ses paramètres signés.
+  Stream<List<DocEntry>> documents([DocEntry? folder]) => _cached(
+        'docs-${folder?.path ?? 'racine'}',
+        () async {
+          final home = parseDocumentsHome(await _client.getText('/apprenant/documents/'));
+          if (home == null) throw const NetypareoException('Espace Documents illisible.');
+          return _client.postText('/document/liste/', {
+            'explorerId': home.explorerId,
+            'fsParams': folder?.fsParams ?? home.fsParams,
+            'showFileMenu': 1,
+            'path': folder?.path ?? base64.encode(utf8.encode('[null,null]')),
+          });
+        },
+        _html((d) => parseDocumentList(d)),
+      );
+
+  /// Documents de liaison des 365 derniers jours.
+  Stream<List<DocLiaison>> docsLiaison() {
+    final format = DateFormat('dd/MM/yyyy');
+    final now = DateTime.now();
+    return _cached(
+      'liaison',
+      () => _client.postText('/pedagogie/documents-liaison/lister-ressource/ajax/', {
+        'filtrePublication': 'all',
+        'filtreDocument': 'all',
+        'periodePublication': 'dates',
+        'dateDebRecherche': format.format(now.subtract(const Duration(days: 365))),
+        'dateFinRecherche': format.format(now.add(const Duration(days: 1))),
+      }),
+      parseDocsLiaison,
+    );
+  }
+
+  Stream<({String text, List<DocumentLink> documents})> docLiaisonDetail(int code) => _cached(
+        'liaison-$code',
+        () => _client.getText('/pedagogie/documents-liaison/detail/$code'),
+        _html((d) => parseDocLiaisonDetail(d)),
+      );
 
   Future<({File file, String mimeType})> downloadDocument(DocumentLink link) =>
       _client.downloadDocument(link.path, link.name);

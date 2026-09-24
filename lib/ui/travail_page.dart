@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
 import '../main.dart';
+import 'cached_view.dart';
 import 'expressive.dart';
 import 'format.dart';
 import 'seance_sheet.dart';
@@ -18,48 +19,26 @@ class TravailPage extends StatefulWidget {
 }
 
 class _TravailPageState extends State<TravailPage> {
-  Future<List<TravailAFaire>>? _future;
   String? _subject;
   bool _hideDone = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _future ??= AppScope.read(context).travailAFaire();
-  }
-
-  Future<void> _refresh() async {
-    final future = AppScope.read(context).travailAFaire();
-    setState(() {
-      _future = future;
-    });
-    await future;
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<TravailAFaire>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: ExpressiveLoader());
-          }
-          if (snapshot.hasError) {
-            return EmptyState(
-              icon: Icons.cloud_off_rounded,
-              title: 'Travail à faire indisponible',
-              message: AppState.errorMessage(snapshot.error!),
-              action: FilledButton.tonal(onPressed: _refresh, child: const Text('Réessayer')),
-            );
-          }
-          return _buildList(context, snapshot.data!);
-        },
+      body: CachedView<List<TravailAFaire>>(
+        load: AppScope.read(context).travailAFaire,
+        failed: (context, error, retry) => EmptyState(
+          icon: Icons.cloud_off_rounded,
+          title: 'Travail à faire indisponible',
+          message: AppState.errorMessage(error),
+          action: FilledButton.tonal(onPressed: retry, child: const Text('Réessayer')),
+        ),
+        builder: _buildList,
       ),
     );
   }
 
-  Widget _buildList(BuildContext context, List<TravailAFaire> all) {
+  Widget _buildList(BuildContext context, List<TravailAFaire> all, CacheStatus status) {
     final todo = all.where((t) => !t.done).length;
     final subjects = <String, int>{};
     for (final t in all) {
@@ -74,7 +53,7 @@ class _TravailPageState extends State<TravailPage> {
 
     return RefreshIndicator(
       edgeOffset: 80,
-      onRefresh: _refresh,
+      onRefresh: status.refresh,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -88,6 +67,7 @@ class _TravailPageState extends State<TravailPage> {
               },
             ),
           ),
+          SliverToBoxAdapter(child: CacheBanner(status: status)),
           if (all.isNotEmpty)
             SliverToBoxAdapter(
               child: SingleChildScrollView(
@@ -141,7 +121,7 @@ class _TravailPageState extends State<TravailPage> {
                     for (final (i, t) in items.indexed)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: EnterAnimation(index: i, child: _TravailCard(travail: t, onChanged: _refresh)),
+                        child: EnterAnimation(index: i, child: _TravailCard(travail: t, onChanged: status.refresh)),
                       ),
                   ],
                 ],

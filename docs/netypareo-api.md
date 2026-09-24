@@ -181,7 +181,11 @@ Aucune note n'était saisie au moment de l'exploration. Les formats de réponse 
 
 ### Documents de liaison
 - `GET /pedagogie/documents-liaison/lister/{codeDocLiaisonDepot?}/{isSelection?}`
-- `POST /pedagogie/documents-liaison/lister-ressource/ajax/` (filtres dans le body) renvoie un **JSON** (`[]` ici). Les paramètres exacts des filtres restent à capturer : période, type (consultation / à retourner), tri.
+- `POST /pedagogie/documents-liaison/lister-ressource/ajax/` renvoie un **JSON** (liste de dépôts). Body :
+  - `filtrePublication=all`, `filtreDocument=all`
+  - `periodePublication=dates` (ou `7`, `15`, `30`, `90` jours)
+  - `dateDebRecherche` / `dateFinRecherche` au format `JJ/MM/AAAA` (le format ISO donne une erreur 500)
+  - Champs lus par le site : `codeNetDocLiaisonDepot`, `nomDepot`, `dateCreation`, `emetteur{abregeCivilite, nom, prenom}`, `isARetourner`, `dateLu`, `dateRetour`, `dateEcheance`, `nbLus`, `nbRetournes`.
 - `GET /pedagogie/documents-liaison/detail/{codeDocLiaisonDepot}`
 - ✏️ `/pedagogie/documents-liaison/deposer/{code?}`, `POST /pedagogie/documents-liaison/delete-liste-depots/`
 
@@ -196,6 +200,9 @@ Aucune note n'était saisie au moment de l'exploration. Les formats de réponse 
   - `showFileMenu=1`
   - `path=` base64 de `["NomDossier", sousDossierId|null]`, par exemple `["Préinscription",null]`. Racine = `[null,null]`.
   - Chaque ligne a `data-resource-type` (directory/file), `data-file-system-params` et `data-file-system-path`.
+  - Dossier : `title` = nom, `.text-small` = « (7) » quand le site annonce un nombre de fichiers. La ligne « dossier précédent » porte l'icône `.document-level-up`.
+  - Fichier : lien `/document/telecharger/`, icône `document-pdf`, `document-image`…, colonnes Type (3e), Contexte, Créateur, Modifié le (6e, « 27/04/2026 à 16:19 »).
+  - Pour ouvrir un sous-dossier : rappeler `/document/liste/` avec le `fsParams` et le `path` de sa ligne.
 - `/document/liste/recherche/` (recherche), `/document/liste/documents-recents/` (POST, 404 en GET)
 - Téléchargement : `GET /document/telecharger/{token}/`
 - ✏️ `/document/renommer/`, `/document/televerser/modal/{id?}/{nbMaxDocument?}`
@@ -231,6 +238,6 @@ Aucune note n'était saisie au moment de l'exploration. Les formats de réponse 
 ## Reste à explorer
 - Capture réelle du POST `/authentication/`, de la redirection et du nom du cookie, puis de l'écran 2FA s'il apparaît.
 - Formats des notes et du bulletin une fois des notes saisies.
-- Paramètres de `/pedagogie/documents-liaison/lister-ressource/ajax/`.
+- Structure HTML du détail d'un document de liaison (aucun document sur le compte de test).
 - Mapping des codes 150/151/153 du calendrier.
 - Émargement pendant un cours.

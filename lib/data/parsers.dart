@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/dom.dart';
 
 import 'models.dart';
@@ -273,6 +275,93 @@ List<TravailAFaire> parseTravailAFaire(Document doc) {
     }
   }
   return result;
+}
+
+/// Page `/apprenant/documents/` : paramètres signés de l'explorateur, à renvoyer à `/document/liste/`.
+({String fsParams, String explorerId})? parseDocumentsHome(String page) {
+  final fs = RegExp(r"currentFsParams\s*=\s*'([^']+)'").firstMatch(page)?.group(1);
+  final explorer = RegExp(r'explorer-app-\d+').firstMatch(page)?.group(0);
+  if (fs == null || explorer == null) return null;
+  return (fsParams: fs, explorerId: explorer);
+}
+
+/// Contenu d'un dossier (`/document/liste/`) : dossiers d'abord, puis fichiers.
+List<DocEntry> parseDocumentList(Document doc) {
+  final entries = <DocEntry>[];
+  for (final row in doc.querySelectorAll('tbody tr')) {
+    final cells = row.querySelectorAll('td');
+    final folder = row.querySelector('a[data-resource-type="directory"]');
+    if (folder != null) {
+      final name = cleanText(folder.attributes['title'] ?? folder.text);
+      // La ligne "Dossier précédent" : la navigation se fait dans l'application.
+      if (row.querySelector('.document-level-up') != null) continue;
+      final count = RegExp(r'\((\d+)\)').firstMatch(folder.querySelector('.text-small')?.text ?? '')?.group(1);
+      entries.add(DocEntry(
+        name: name,
+        isFolder: true,
+        count: count == null ? null : int.parse(count),
+        fsParams: folder.attributes['data-file-system-params'],
+        path: folder.attributes['data-file-system-path'],
+      ));
+      continue;
+    }
+    final link = row.querySelector('a[href*="/document/telecharger/"]');
+    if (link == null) continue;
+    final name = cleanText(link.attributes['title'] ?? link.text);
+    final icon = row.querySelector('.icon')?.classes.firstWhere((c) => c.startsWith('document-'), orElse: () => '') ?? '';
+    entries.add(DocEntry(
+      name: name,
+      isFolder: false,
+      download: DocumentLink(name, link.attributes['href']!),
+      type: cells.length > 2 ? cleanText(cells[2].text) : '',
+      modified: cells.length > 5 ? cleanText(cells[5].text) : '',
+      kind: icon.replaceFirst('document-', ''),
+    ));
+  }
+  return entries;
+}
+
+/// Liste JSON des documents de liaison (`/pedagogie/documents-liaison/lister-ressource/ajax/`).
+List<DocLiaison> parseDocsLiaison(String json) {
+  final data = jsonDecode(json);
+  if (data is! List) return const [];
+  return [
+    for (final raw in data.whereType<Map<String, dynamic>>())
+      DocLiaison(
+        code: (raw['codeNetDocLiaisonDepot'] as num?)?.toInt() ?? 0,
+        name: '${raw['nomDepot'] ?? ''}'.trim(),
+        created: _jsonDate(raw['dateCreation']),
+        sender: _personne(raw['emetteur']),
+        toReturn: raw['isARetourner'] == true,
+        read: raw['dateLu'] != null,
+        returned: raw['dateRetour'] != null,
+        due: _jsonDate(raw['dateEcheance']),
+      ),
+  ]..sort((a, b) => (b.created ?? DateTime(0)).compareTo(a.created ?? DateTime(0)));
+}
+
+String _personne(Object? raw) {
+  if (raw is! Map) return '';
+  return [raw['abregeCivilite'], raw['nom'], raw['prenom']].where((p) => p != null && '$p'.isNotEmpty).join(' ');
+}
+
+/// Dates du JSON NetYParéo : chaîne ISO ou "JJ/MM/AAAA", objet PHP `{date: ...}`, ou timestamp.
+DateTime? _jsonDate(Object? raw) {
+  if (raw == null) return null;
+  if (raw is num) return DateTime.fromMillisecondsSinceEpoch(raw > 1e11 ? raw.toInt() : raw.toInt() * 1000);
+  if (raw is Map) return _jsonDate(raw['date']);
+  final text = '$raw';
+  final fr = RegExp(r'^(\d{2})/(\d{2})/(\d{4})').firstMatch(text);
+  if (fr != null) return DateTime(int.parse(fr[3]!), int.parse(fr[2]!), int.parse(fr[1]!));
+  return DateTime.tryParse(text.replaceFirst(' ', 'T'));
+}
+
+/// Détail d'un document de liaison : texte et pièces jointes.
+({String text, List<DocumentLink> documents}) parseDocLiaisonDetail(Document doc) {
+  final body = doc.querySelector('.modal-body, .content-body, body');
+  final clone = body?.clone(true);
+  clone?.querySelectorAll('script, style, button, a[href*="/document/telecharger/"]').forEach((e) => e.remove());
+  return (text: richText(clone).replaceAll(RegExp(r'\n{3,}'), '\n\n').trim(), documents: body == null ? const [] : _documentLinks(body));
 }
 
 List<DocumentLink> _documentLinks(Element root) => root

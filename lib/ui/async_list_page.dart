@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../data/app_state.dart';
+import 'cached_view.dart';
 import 'expressive.dart';
 
-/// Page à grand titre qui charge une liste à la demande, avec tirer-pour-rafraîchir.
+/// Page à grand titre : liste enregistrée affichée tout de suite, mise à jour derrière,
+/// tirer-pour-rafraîchir.
 class AsyncListPage<T> extends StatefulWidget {
   const AsyncListPage({
     super.key,
@@ -14,7 +16,7 @@ class AsyncListPage<T> extends StatefulWidget {
   });
 
   final String title;
-  final Future<List<T>> Function() load;
+  final Stream<List<T>> Function() load;
   final Widget Function(BuildContext context, T item, int index) itemBuilder;
   final Widget empty;
 
@@ -23,57 +25,45 @@ class AsyncListPage<T> extends StatefulWidget {
 }
 
 class _AsyncListPageState<T> extends State<AsyncListPage<T>> {
-  late Future<List<T>> _future = widget.load();
-
-  Future<void> _refresh() async {
-    final future = widget.load();
-    setState(() {
-      _future = future;
-    });
-    await future.catchError((_) => <T>[]);
+  Widget _page(List<Widget> slivers, {Future<void> Function()? onRefresh}) {
+    final view = CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [SliverToBoxAdapter(child: PageHeader(title: widget.title)), ...slivers],
+    );
+    return onRefresh == null ? view : RefreshIndicator(onRefresh: onRefresh, edgeOffset: 80, child: view);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        edgeOffset: 80,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: PageHeader(title: widget.title)),
-            FutureBuilder<List<T>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const SliverFillRemaining(child: Center(child: ExpressiveLoader()));
-                }
-                if (snapshot.hasError) {
-                  return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: EmptyState(
-                      icon: Icons.cloud_off_rounded,
-                      title: 'Chargement impossible',
-                      message: AppState.errorMessage(snapshot.error!),
-                      action: FilledButton.tonal(onPressed: _refresh, child: const Text('Réessayer')),
-                    ),
-                  );
-                }
-                final items = snapshot.data!;
-                if (items.isEmpty) return SliverFillRemaining(hasScrollBody: false, child: widget.empty);
-                return SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  sliver: SliverList.separated(
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) =>
-                        EnterAnimation(index: i, child: widget.itemBuilder(context, items[i], i)),
-                  ),
-                );
-              },
+      body: CachedView<List<T>>(
+        load: widget.load,
+        loading: (context) => _page(const [SliverFillRemaining(child: Center(child: ExpressiveLoader()))]),
+        failed: (context, error, retry) => _page(onRefresh: retry, [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyState(
+              icon: Icons.cloud_off_rounded,
+              title: 'Chargement impossible',
+              message: AppState.errorMessage(error),
+              action: FilledButton.tonal(onPressed: retry, child: const Text('Réessayer')),
             ),
-          ],
-        ),
+          ),
+        ]),
+        builder: (context, items, status) => _page(onRefresh: status.refresh, [
+          SliverToBoxAdapter(child: CacheBanner(status: status)),
+          if (items.isEmpty)
+            SliverFillRemaining(hasScrollBody: false, child: widget.empty)
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, i) => EnterAnimation(index: i, child: widget.itemBuilder(context, items[i], i)),
+              ),
+            ),
+        ]),
       ),
     );
   }
