@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs du widget : celles du logo, remplacées par les couleurs du fond d'écran
+         à partir d'Android 12 (values-v31). -->
+    <color name="widget_background">#EDEBFF</color>
+    <color name="widget_chip">#DAD6FF</color>
+    <color name="widget_accent">#5B4BD6</color>
+    <color name="widget_on_background">#1B1B23</color>
+    <color name="widget_on_background_variant">#474554</color>
+    <dimen name="widget_radius">24dp</dimen>
+    <string name="widget_next_course_description">Le cours en cours ou le prochain, avec l\'horaire et la salle.</string>
+    <!-- Exemple affiché dans la galerie des widgets. -->
+    <string name="widget_preview_label">PROCHAIN COURS</string>
+    <string name="widget_preview_subject">Anglais</string>
+    <string name="widget_preview_details">13:00 – 17:00 · Salle 12</string>
+</resources>

@@ -13,6 +13,7 @@ import '../core/netypareo_client.dart';
 import '../core/page_cache.dart';
 import 'background_sync.dart';
 import 'calendar_mirror.dart';
+import 'course_widget.dart';
 import 'models.dart';
 import 'notifications.dart';
 import 'parsers.dart';
@@ -80,6 +81,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _startKeepAlive();
     unawaited(_scheduleAlerts());
+    unawaited(CourseWidget.update(seances));
     unawaited(sync());
   }
 
@@ -131,6 +133,7 @@ class AppState extends ChangeNotifier {
     await _secure.deleteAll();
     await _pages.clear();
     await _prefs.clear();
+    await CourseWidget.update(const []);
     profile = null;
     seances = const [];
     lastSync = null;
@@ -223,6 +226,7 @@ class AppState extends ChangeNotifier {
       lastSync = DateTime.now();
       if (alertsEnabled) await PlanningNotifications.showChanges(changes);
       unawaited(CalendarMirror.sync(_prefs, fresh).catchError((Object e) => debugPrint('Agenda : $e')));
+      unawaited(CourseWidget.update(fresh));
     } catch (e) {
       syncError = _message(e);
     } finally {

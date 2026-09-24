@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_background">@android:color/system_accent1_50</color>
+    <color name="widget_chip">@android:color/system_accent1_100</color>
+    <color name="widget_accent">@android:color/system_accent1_600</color>
+    <color name="widget_on_background">@android:color/system_neutral1_900</color>
+    <color name="widget_on_background_variant">@android:color/system_neutral2_700</color>
+    <dimen name="widget_radius">@android:dimen/system_app_widget_background_radius</dimen>
+</resources>

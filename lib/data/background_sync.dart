@@ -8,6 +8,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../core/netypareo_client.dart';
 import 'calendar_mirror.dart';
+import 'course_widget.dart';
 import 'models.dart';
 import 'notifications.dart';
 import 'parsers.dart';
@@ -80,6 +81,7 @@ void callbackDispatcher() {
       final fresh = parseIcal(await client.getPublicText(url), codeApprenant: code);
       await PlanningNotifications.showChanges(await PlanningStore.save(prefs, fresh));
       await CalendarMirror.sync(prefs, fresh);
+      await CourseWidget.update(fresh);
       return true;
     } catch (e) {
       debugPrint('Synchronisation en arrière-plan : $e');
