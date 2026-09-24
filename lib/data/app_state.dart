@@ -338,6 +338,13 @@ class AppState extends ChangeNotifier {
         _html((d) => parseDocumentList(d)),
       );
 
+  /// Calendrier de formation : jours au centre, en entreprise ou indisponibles, sur l'année.
+  Stream<Alternance> alternance() => _cached(
+        'alternance',
+        () => _client.getText('/apprenant/calendrier/${profile!.codeApprenant}/'),
+        _html((d) => parseAlternance(d)),
+      );
+
   /// Documents de liaison des 365 derniers jours.
   Stream<List<DocLiaison>> docsLiaison() {
     final format = DateFormat('dd/MM/yyyy');

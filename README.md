@@ -32,11 +32,13 @@ Déjà dans l'application (version 0.2, Android) :
 - **Tout s'affiche tout de suite** : chaque écran montre la dernière version enregistrée, se met à jour en arrière-plan et se redessine si quelque chose a changé. Hors ligne, un bandeau le signale.
 - **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
 - **Copie dans l'agenda du téléphone** (option) : un agenda "NetYParéo+" apparaît dans Google Agenda, Samsung Agenda, etc., et suit chaque synchronisation. Le couper supprime cet agenda, les autres ne sont jamais touchés.
+- **Calendrier d'alternance** : l'année mois par mois, chaque jour coloré selon qu'il se passe au centre ou en entreprise, avec où tu es aujourd'hui et la date du prochain changement.
+- **Widget d'écran d'accueil "Prochain cours"** : le cours en cours ou le suivant, l'horaire, la salle et le cours d'après. Il se met à jour tout seul aux débuts et fins de cours, application fermée.
 - Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
 
 Prévu (visible et grisé dans l'onglet "Plus") :
 
-- **Notes et bulletin**, **calendrier centre / entreprise**.
+- **Notes et bulletin**.
 
 ### 📸 Aperçu
 

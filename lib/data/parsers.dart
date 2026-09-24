@@ -368,3 +368,50 @@ List<DocumentLink> _documentLinks(Element root) => root
     .querySelectorAll('a[href*="/document/telecharger/"]')
     .map((a) => DocumentLink(cleanText(a.text), a.attributes['href']!))
     .toList();
+
+/// Calendrier de formation (`/apprenant/calendrier/{codeApprenant}/`).
+///
+/// Chaque jour est une case `a[data-date][data-identifiant]` colorée ; la légende associe ces
+/// couleurs à « Présence au centre de formation », « Présence en entreprise » ou « Créneaux
+/// indisponibles ». Les codes (150, 153, 151 ici) sont retrouvés par la couleur, pour ne pas
+/// dépendre de leur valeur.
+Alternance parseAlternance(Document doc) {
+  String? rgb(String style) {
+    final hex = RegExp(r'#([0-9a-fA-F]{6})').firstMatch(style)?.group(1);
+    if (hex != null) {
+      return [for (var i = 0; i < 6; i += 2) int.parse(hex.substring(i, i + 2), radix: 16)].join(',');
+    }
+    return RegExp(r'rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)').firstMatch(style)?.let((m) => '${m[1]},${m[2]},${m[3]}');
+  }
+
+  DayKind? kindOf(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('centre')) return DayKind.centre;
+    if (l.contains('entreprise')) return DayKind.entreprise;
+    if (l.contains('indisponible') || l.contains('férié') || l.contains('ferme')) return DayKind.off;
+    return null;
+  }
+
+  final legend = <String, DayKind>{};
+  for (final item in doc.querySelectorAll('.legende-item')) {
+    final color = rgb(item.querySelector('.legende-item-color')?.attributes['style'] ?? '');
+    final kind = kindOf(item.querySelector('.legende-item-text')?.text ?? '');
+    if (color != null && kind != null) legend[color] = kind;
+  }
+
+  final days = <DateTime, DayKind>{};
+  for (final cell in doc.querySelectorAll('[data-date][data-identifiant]')) {
+    final date = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(cell.attributes['data-date'] ?? '');
+    final color = rgb(cell.attributes['style'] ?? '');
+    final kind = color == null ? null : legend[color];
+    if (date == null || kind == null) continue;
+    days[DateTime(int.parse(date[3]!), int.parse(date[2]!), int.parse(date[1]!))] = kind;
+  }
+
+  final period = RegExp(r'Calendrier du \d{2}/\d{2}/\d{4} au \d{2}/\d{2}/\d{4}').firstMatch(doc.body?.text ?? '')?.group(0);
+  return Alternance(days: days, period: period ?? '');
+}
+
+extension _Let<T> on T {
+  R let<R>(R Function(T) f) => f(this);
+}

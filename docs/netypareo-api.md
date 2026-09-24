@@ -127,6 +127,11 @@ Page HTML dont un `<script>` contient `var planningJSON = {...};`. C'est du JSON
   {"creneaux":[{"jour":"21/09/2026","creneaux":[150,150,...,151,151]}, ...]}
   ```
   Un code par demi-heure. `150`/`151`/`153` : types (centre, entreprise, férié…), dont le mapping est à déduire de la légende HTML de la page.
+- `GET /apprenant/calendrier/{codeApprenant}/` (HTML) : toute l'année d'un coup, c'est ce que lit l'application.
+  - Chaque jour : `<a data-date="dd/MM/yyyy" data-identifiant="150" style="background-color: rgb(r,g,b)">`. Les jours sans type (week-ends, hors période) n'ont pas de `data-date`.
+  - Légende : `.legende-item` > `.legende-item-color` (`background-color: #RRGGBB`) + `.legende-item-text`.
+  - Sur l'instance explorée : `150` = « Présence au centre de formation » (#A8FFA8), `153` = « Présence en entreprise » (#FF8080), `151` = « Créneaux indisponibles » (#FF7D7D, ex. jours fériés). Les codes dépendent du CFA : l'application relie chaque jour à son libellé **par la couleur** de la légende, pas par le code.
+  - Titre : « Calendrier du dd/MM/yyyy au dd/MM/yyyy ».
 - `GET /apprenant/calendrier/pdf/{codeApprenant}/{codeInscription}/0/` : PDF du calendrier.
 
 ---

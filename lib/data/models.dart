@@ -242,3 +242,19 @@ class DocLiaison {
   final bool returned;
   final DateTime? due;
 }
+
+/// Type d'une journée du calendrier de formation.
+enum DayKind { centre, entreprise, off }
+
+/// Calendrier de formation (alternance centre / entreprise) de l'inscription en cours.
+class Alternance {
+  const Alternance({required this.days, this.period = ''});
+
+  /// Jours ouvrés de la période, avec leur type. Les jours absents ne sont pas renseignés.
+  final Map<DateTime, DayKind> days;
+
+  /// "Calendrier du 14/09/2026 au 02/07/2027" tel qu'affiché par le site.
+  final String period;
+
+  int count(DayKind kind) => days.values.where((k) => k == kind).length;
+}

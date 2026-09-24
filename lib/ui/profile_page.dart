@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../main.dart';
+import 'alternance_page.dart';
 import 'documents_page.dart';
 import 'expressive.dart';
 
@@ -125,11 +126,20 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('Mes documents', style: text.titleLarge),
+                Text('Ma formation', style: text.titleLarge),
                 const SizedBox(height: 12),
                 Card(
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(Icons.date_range_rounded),
+                        title: const Text('Alternance'),
+                        subtitle: const Text("Jours au centre et en entreprise sur l'année"),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => const AlternancePage()),
+                        ),
+                      ),
                       ListTile(
                         leading: const Icon(Icons.folder_rounded),
                         title: const Text('Documents'),
@@ -225,7 +235,6 @@ class _UpcomingGrid extends StatelessWidget {
 
   static const _features = [
     (Icons.grade_rounded, 'Notes et bulletin'),
-    (Icons.date_range_rounded, 'Calendrier centre / entreprise'),
   ];
 
   @override
