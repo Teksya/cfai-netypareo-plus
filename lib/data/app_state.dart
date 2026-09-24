@@ -241,19 +241,24 @@ class AppState extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Données à la demande (session requise)
 
-  /// Version enregistrée d'abord (affichage immédiat, même hors ligne), puis version à jour.
+  /// Version enregistrée d'abord (affichage immédiat, même hors ligne), puis version à jour
+  /// seulement si la page a changé.
   /// Si le réseau échoue après la version enregistrée, le flux se termine par l'erreur :
   /// l'écran garde les données et signale qu'elles ne sont peut-être plus à jour.
   Stream<T> _cached<T>(String key, Future<String> Function() fetch, T Function(String text) parse) async* {
     final saved = await _pages.read(key);
+    var shown = false;
     if (saved != null) {
       try {
         yield parse(saved);
+        shown = true;
       } catch (e) {
         debugPrint('Cache illisible ($key) : $e');
       }
     }
     final fresh = await fetch();
+    // Page identique à celle affichée : rien à redessiner.
+    if (shown && fresh == saved) return;
     final value = parse(fresh);
     await _pages.write(key, fresh);
     yield value;
@@ -266,6 +271,24 @@ class AppState extends ChangeNotifier {
         () => _client.getText('/planning/seance/$codeSeance/7500/${profile!.codeApprenant}'),
         _html((d) => parseSeanceDetail(d)),
       );
+
+  final _prefetched = <int>{};
+
+  /// Télécharge en arrière-plan le détail des cours d'un jour (une fois par ouverture de
+  /// l'application) : leur fiche s'ouvre ensuite directement complète.
+  Future<void> prefetchSeanceDetails(DateTime day) async {
+    if (profile == null) return;
+    for (final s in seancesOn(day)) {
+      final code = s.codeSeance;
+      if (code == null || !_prefetched.add(code)) continue;
+      try {
+        await seanceDetail(code).drain<void>();
+      } catch (e) {
+        _prefetched.remove(code);
+        return;
+      }
+    }
+  }
 
   Stream<List<Absence>> absences() =>
       _cached('absences', () => _client.getText('/apprenant/assiduite/'), _html((d) => parseAbsences(d)));

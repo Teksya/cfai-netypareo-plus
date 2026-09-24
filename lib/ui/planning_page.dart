@@ -39,6 +39,14 @@ class PlanningPageState extends State<PlanningPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppScope.read(context).prefetchSeanceDetails(_selected);
+    });
+  }
+
+  @override
   void dispose() {
     _pages.dispose();
     super.dispose();
@@ -128,7 +136,10 @@ class PlanningPageState extends State<PlanningPage> {
           Expanded(
             child: PageView.builder(
               controller: _pages,
-              onPageChanged: (page) => setState(() => _selected = _dayOf(page)),
+              onPageChanged: (page) {
+                setState(() => _selected = _dayOf(page));
+                AppScope.read(context).prefetchSeanceDetails(_selected);
+              },
               itemBuilder: (context, page) => _DayView(day: _dayOf(page)),
             ),
           ),

@@ -167,6 +167,10 @@ class _CahierPageState extends State<CahierPage> {
     for (final e in entries) {
       days.putIfAbsent(e.date == null ? null : DateUtils.dateOnly(e.date!), () => []).add(e);
     }
+    // Les jours suivent le tri choisi, mais dans une journée on lit toujours dans l'ordre des heures.
+    for (final list in days.values) {
+      list.sort((a, b) => (a.date ?? DateTime(0)).compareTo(b.date ?? DateTime(0)));
+    }
     var index = 0;
     return [
       for (final day in days.entries) ...[

@@ -139,7 +139,8 @@ class _CachedViewState<T> extends State<CachedView<T>> {
   }
 }
 
-/// Petit bandeau "à jour / mise à jour / hors ligne", à placer sous un titre de page.
+/// Bandeau "hors ligne", à placer sous un titre de page. La mise à jour en arrière-plan reste
+/// discrète : rien ne s'insère dans la page pendant qu'elle se fait, pour que le contenu ne saute pas.
 class CacheBanner extends StatelessWidget {
   const CacheBanner({super.key, required this.status});
 
@@ -147,35 +148,22 @@ class CacheBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (status.error == null) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final Widget child;
-    if (status.error != null) {
-      child = Padding(
-        key: const ValueKey('offline'),
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-        child: Row(
-          children: [
-            Icon(Icons.cloud_off_rounded, size: 16, color: scheme.error),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Hors ligne : dernière version enregistrée.',
-                style: text.bodySmall?.copyWith(color: scheme.error),
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 16, color: scheme.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Hors ligne : dernière version enregistrée.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.error),
             ),
-          ],
-        ),
-      );
-    } else if (status.refreshing) {
-      child = const Padding(
-        key: ValueKey('refreshing'),
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-        child: LinearProgressIndicator(minHeight: 3, borderRadius: BorderRadius.all(Radius.circular(2))),
-      );
-    } else {
-      child = const SizedBox(key: ValueKey('idle'), width: double.infinity);
-    }
-    return AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: child);
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -45,7 +45,13 @@ class _TravailPageState extends State<TravailPage> {
       subjects[t.subject] = (subjects[t.subject] ?? 0) + 1;
     }
     final shown = all.where((t) => (_subject == null || t.subject == _subject) && !(_hideDone && t.done)).toList()
-      ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+      ..sort((a, b) {
+        // Tri complet (List.sort n'est pas stable) : même ordre à chaque affichage.
+        final day = a.dueDate.compareTo(b.dueDate);
+        if (day != 0) return day;
+        final subject = a.subject.compareTo(b.subject);
+        return subject != 0 ? subject : a.code.compareTo(b.code);
+      });
     final byDay = <DateTime, List<TravailAFaire>>{};
     for (final t in shown) {
       byDay.putIfAbsent(t.dueDate, () => []).add(t);

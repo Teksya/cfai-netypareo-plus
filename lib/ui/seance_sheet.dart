@@ -84,11 +84,15 @@ class _SeanceSheetState extends State<_SeanceSheet> {
           CachedView<SeanceDetail>(
             load: () => AppScope.read(context).seanceDetail(code),
             // Pas encore de détail enregistré : les infos du planning en attendant.
+            // Même mise en page que le détail : seul le cahier de textes attend.
             loading: (context) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _BasicInfos(seance: s),
-                const Padding(padding: EdgeInsets.all(24), child: Center(child: ExpressiveLoader())),
+                const SizedBox(height: 24),
+                Text('Cahier de textes', style: text.titleLarge),
+                const SizedBox(height: 12),
+                const Align(alignment: Alignment.centerLeft, child: ExpressiveLoader(size: 28)),
               ],
             ),
             failed: (context, error, retry) => Column(
@@ -130,9 +134,9 @@ class _BasicInfos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InfoCard(entries: {
+      if (seance.group.isNotEmpty) 'Groupe(s)': seance.group,
       if (seance.teachers.isNotEmpty) 'Formateur(s)': seance.teachers,
       if (seance.room.isNotEmpty) 'Salle(s)': seance.room,
-      if (seance.group.isNotEmpty) 'Groupe(s)': seance.group,
     });
   }
 }
