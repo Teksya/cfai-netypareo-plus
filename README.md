@@ -104,7 +104,7 @@ flutter run
 
 ### 🍏 iOS
 
-Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS, à chaque push sur `main` ou `ios-support` (onglet **Actions**, artefact `netypareo_plus-ios`). Elle s'installe avec [AltStore](https://altstore.io) ou [Sideloadly](https://sideloadly.io) et ton identifiant Apple.
+Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS, à chaque push sur `main` qui touche au code (onglet **Actions**, artefact `netypareo_plus-ios`). Elle s'installe avec [AltStore](https://altstore.io) ou [Sideloadly](https://sideloadly.io) et ton identifiant Apple.
 
 **Garder l'application (compte Apple gratuit)** : la signature dure 7 jours. AltStore la renouvelle tout seul si AltServer tourne sur le PC et que l'iPhone est sur le même Wi-Fi au moins une fois par semaine. À faire une fois, sous Windows :
 

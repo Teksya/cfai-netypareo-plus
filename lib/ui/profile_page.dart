@@ -102,9 +102,12 @@ class ProfilePage extends StatelessWidget {
                   child: SwitchListTile(
                     secondary: const Icon(Icons.event_available_rounded),
                     title: const Text('Copier dans mon agenda'),
-                    subtitle: const Text(
-                      'Ajoute un agenda "NetYParéo+" au téléphone, visible dans Google Agenda, '
-                      'Samsung Agenda... Il se met à jour à chaque synchronisation.',
+                    subtitle: Text(
+                      Theme.of(context).platform == TargetPlatform.iOS
+                          ? 'Ajoute un agenda "NetYParéo+" à l\'iPhone, visible dans l\'app Calendrier. '
+                              'Il se met à jour à chaque synchronisation.'
+                          : 'Ajoute un agenda "NetYParéo+" au téléphone, visible dans Google Agenda, '
+                              'Samsung Agenda... Il se met à jour à chaque synchronisation.',
                     ),
                     isThreeLine: true,
                     value: state.calendarEnabled,

@@ -78,7 +78,7 @@ class NetypareoClient {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
       validateStatus: (status) => status != null && status < 500,
-      headers: {'User-Agent': 'NetYPareoPlus/0.1 (Android; Flutter)'},
+      headers: {'User-Agent': 'NetYPareoPlus/0.1 (${Platform.isIOS ? 'iOS' : 'Android'}; Flutter)'},
     ));
     dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () => HttpClient(context: context));
     dio.interceptors.add(CookieManager(jar));
