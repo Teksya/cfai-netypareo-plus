@@ -96,6 +96,12 @@ flutter run
 | `flutter test` | Lance les tests |
 | `flutter build apk` | Construit l'application Android |
 
+### 🍏 iOS
+
+Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS (onglet **Actions**, artefact `netypareo_plus-ios`). Installe-la avec [Sideloadly](https://sideloadly.io) ou [AltStore](https://altstore.io) et ton identifiant Apple ; avec un compte gratuit, la signature est à refaire tous les 7 jours.
+
+Différences avec Android : pas de widget d'écran d'accueil (il faudrait une extension WidgetKit), pas de couleurs du fond d'écran, et iOS décide seul quand lancer la synchronisation en arrière-plan (souvent moins que toutes les 15 minutes).
+
 Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes), `device_calendar_plus` (agenda).
 
 ## 📝 Contribution

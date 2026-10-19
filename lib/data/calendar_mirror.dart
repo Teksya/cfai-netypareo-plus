@@ -97,7 +97,10 @@ class CalendarMirror {
     final calendars = await _calendar.listCalendars();
     final stored = prefs.getString(_kCalendarId);
     final current = calendars.where((c) => c.id == stored).firstOrNull;
-    if (current != null && current.accountName == _name) return current.id;
+    // Sur iOS, le compte est la source de l'agenda (iCloud, "Sur mon iPhone"), jamais notre nom.
+    if (current != null && (current.accountName == _name || defaultTargetPlatform == TargetPlatform.iOS)) {
+      return current.id;
+    }
     // Premières versions : agenda rangé sous le compte "local", introuvable dans Google Agenda.
     if (current != null) await _calendar.deleteCalendar(current.id);
     // Agenda supprimé à la main (ou réinstallation) : on repart de zéro. Le nom de compte est

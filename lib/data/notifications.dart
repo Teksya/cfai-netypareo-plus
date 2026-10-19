@@ -45,7 +45,15 @@ class PlanningNotifications {
   static Future<void> init() async {
     if (_ready) return;
     await _plugin.initialize(
-      settings: const InitializationSettings(android: AndroidInitializationSettings('ic_launcher_monochrome')),
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('ic_launcher_monochrome'),
+        // L'autorisation est demandée plus tard, avec requestPermission.
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
+      ),
       onDidReceiveNotificationResponse: (response) =>
           openRequests.value = OpenRequest.fromPayload(response.payload),
     );
@@ -60,9 +68,11 @@ class PlanningNotifications {
     }
   }
 
-  /// Android 13 et plus : demande l'autorisation d'afficher des notifications.
+  /// Android 13 et plus, iOS : demande l'autorisation d'afficher des notifications.
   static Future<bool> requestPermission() async {
     await init();
+    final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) return await ios.requestPermissions(alert: true, badge: true, sound: true) ?? false;
     final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? true;
   }
@@ -90,7 +100,8 @@ class PlanningNotifications {
       );
     }
     // Sans résumé à nous, Android groupe tout seul et un appui sur le groupe n'ouvre rien de précis.
-    if (changes.length > 1) {
+    // iOS groupe par threadIdentifier : un résumé y serait une notification de plus.
+    if (changes.length > 1 && defaultTargetPlatform == TargetPlatform.android) {
       await _show(
         0,
         '${changes.length} changements dans ton planning',
@@ -121,6 +132,7 @@ class PlanningNotifications {
             groupKey: 'planning',
             setAsGroupSummary: summary,
           ),
+          iOS: const DarwinNotificationDetails(threadIdentifier: 'planning'),
         ),
       );
 
