@@ -18,7 +18,7 @@ NetYParéo contient tout ce dont un apprenti a besoin : l'emploi du temps, le ca
 
 ### 🚀 Fonctionnalités
 
-Déjà dans l'application (version 0.3, Android et iOS, widget Android uniquement) :
+Déjà dans l'application (version 0.3, Android et iOS) :
 
 - **Connexion** avec ton compte NetYParéo, reconnexion automatique quand la session expire.
 - **Emploi du temps** consultable hors ligne, en quatre dispositions au choix : **jour** (la semaine en haut, le cours en cours mis en avant, les pauses affichées), **3 jours** et **semaine** (grille horaire, un bloc coloré par cours), **liste** (tous les cours à venir, avec les périodes sans cours au centre).
@@ -33,7 +33,7 @@ Déjà dans l'application (version 0.3, Android et iOS, widget Android uniquemen
 - **Alertes de changement de cours** : environ toutes les 15 minutes, même application fermée, le planning est vérifié. Une notification détaille chaque cours ajouté, retiré ou modifié (horaire, salle, formateur) et ouvre le cours d'un appui. Se coupe dans l'onglet "Plus".
 - **Copie dans l'agenda du téléphone** (option) : un agenda "NetYParéo+" apparaît dans Google Agenda, Samsung Agenda, etc., et suit chaque synchronisation. Le couper supprime cet agenda, les autres ne sont jamais touchés.
 - **Calendrier d'alternance** : l'année mois par mois, chaque jour coloré selon qu'il se passe au centre ou en entreprise, avec où tu es aujourd'hui et la date du prochain changement.
-- **Widget d'écran d'accueil "Prochain cours"** : le cours en cours ou le suivant, l'horaire, la salle et le cours d'après. Il se met à jour tout seul aux débuts et fins de cours, application fermée.
+- **Widget d'écran d'accueil "Prochain cours"** (Android) : le cours en cours ou le suivant, l'horaire, la salle et le cours d'après. Il se met à jour tout seul aux débuts et fins de cours, application fermée.
 - Interface **Material 3 Expressive**, couleurs tirées du fond d'écran (Android 12 et plus), thème clair et sombre.
 
 Prévu (visible et grisé dans l'onglet "Plus") :
@@ -57,6 +57,7 @@ Captures faites avec un vrai compte. Les noms des formateurs et de l'apprenti so
 ### 🔍 Jusqu'où va le projet
 
 - La première version tourne sur Android. Elle a été testée sur un émulateur (Android 16) avec un vrai compte apprenant.
+- La version iOS tourne sur un iPhone avec un vrai compte apprenant : planning, cahier de textes, absences et onglet "Plus" vérifiés. Les alertes, la synchronisation en arrière-plan et la copie dans l'agenda n'ont pas encore été testées sur iPhone.
 - NetYParéo n'a **pas d'API officielle**. L'application lit les mêmes pages et les mêmes appels que le site : si YMAG (l'éditeur) change le site, une partie de l'application peut cesser de fonctionner jusqu'à sa mise à jour.
 - Les notes n'ont pas encore été testées : aucune note n'était saisie au moment de l'exploration (septembre 2026).
 - L'application **lit** presque tout : la seule écriture est le bouton « Fait » du travail à faire. Rendre un devoir ou déposer un document restent à faire sur le site.
@@ -68,7 +69,7 @@ Le détail est dans [docs/netypareo-api.md](docs/netypareo-api.md). En résumé 
 1. **Connexion** : `POST /authentication/` avec l'identifiant, le mot de passe et le jeton CSRF de la page de connexion. La session est ensuite gardée dans un cookie.
 2. **Emploi du temps** : le flux iCalendar personnel de l'apprenant. Il fonctionne sans session, ce qui permet la synchronisation en arrière-plan.
 3. **Le reste** : du JSON quand le site en fournit (planning, jours de cours, calendrier), sinon la lecture des pages HTML. Les pages sont encodées en `windows-1252`, le JSON en UTF-8.
-4. **Alertes** : une tâche WorkManager relit le flux iCal toutes les 15 minutes (le minimum d'Android), compare avec la version enregistrée séance par séance, et envoie une notification locale par changement. Rien ne passe par un serveur tiers.
+4. **Alertes** : une tâche de fond relit le flux iCal, compare avec la version enregistrée séance par séance, et envoie une notification locale par changement. Sur Android, WorkManager la lance toutes les 15 minutes (le minimum d'Android). Sur iOS, BGTaskScheduler la lance quand le système le décide. Rien ne passe par un serveur tiers.
 5. **Cache** : chaque page lue sur le site est gardée sur le téléphone (300 pages au plus, effacées à la déconnexion). L'écran s'affiche avec elle, puis avec la version à jour dès qu'elle arrive.
 6. **Maintien de la session** : `GET /rester-connecter/`, appelé tant que l'application est ouverte.
 7. **Certificat** : le serveur du CFA n'envoie pas son certificat intermédiaire (Sectigo DV R36). Les navigateurs s'en passent, pas Android : l'application l'embarque dans `assets/certs/` pour compléter la chaîne. La vérification TLS reste complète.
@@ -82,6 +83,8 @@ lib/
 └── ui/              Écrans (planning, travail, cahier, absences, documents, plus) et composants Material 3 Expressive
 test/                Tests des parsers, sur des données fictives
 tool/gen_logo.dart   Génère le logo en SVG
+android/, ios/       Projets natifs (widget Android, tâche de fond et autorisations iOS)
+.github/workflows/   Construction de l'IPA iOS par GitHub Actions
 ```
 
 ## 🚀 Lancer l'application en local
@@ -101,12 +104,17 @@ flutter run
 | `flutter run` | Lance l'application sur un téléphone ou un émulateur |
 | `flutter test` | Lance les tests |
 | `flutter build apk` | Construit l'application Android |
+| `flutter build ios --no-codesign` | Construit l'application iOS (il faut un Mac avec Xcode) |
 
-### 🍏 iOS
+Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes), `device_calendar_plus` (agenda).
 
-Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS, à chaque push sur `main` qui touche au code (onglet **Actions**, artefact `netypareo_plus-ios`). Elle s'installe avec [AltStore](https://altstore.io) ou [Sideloadly](https://sideloadly.io) et ton identifiant Apple.
+## 🍏 Installer sur iPhone
 
-**Garder l'application (compte Apple gratuit)** : la signature dure 7 jours. AltStore la renouvelle tout seul si AltServer tourne sur le PC et que l'iPhone est sur le même Wi-Fi au moins une fois par semaine. À faire une fois, sous Windows :
+Pas de Mac nécessaire : GitHub Actions construit l'application (voir plus bas). Ouvre l'onglet **Actions** du dépôt, choisis le dernier build réussi du workflow `iOS` et télécharge l'artefact `netypareo_plus-ios`. Il contient `netypareo_plus.ipa`, à installer avec [AltStore](https://altstore.io) ou [Sideloadly](https://sideloadly.io) et ton identifiant Apple.
+
+### 🔁 Garder l'application
+
+Avec un compte Apple gratuit, la signature dure 7 jours. AltStore la renouvelle tout seul si AltServer tourne sur le PC et que l'iPhone est sur le même Wi-Fi au moins une fois par semaine. À faire une fois, sous Windows :
 
 1. Installe iTunes et iCloud **depuis le site d'Apple** (pas les versions du Microsoft Store).
 2. Branche l'iPhone, ouvre iTunes et coche « Synchroniser avec cet iPhone en Wi-Fi ».
@@ -116,11 +124,25 @@ Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non 
 
 Si la signature expire, l'application ne s'ouvre plus mais garde ses données : la réinstaller suffit. Un compte gratuit est limité à 3 applications. Avec l'Apple Developer Program (99 €/an), la signature dure un an et TestFlight devient possible.
 
-Sur iOS, l'application s'appelle « NetYPareo » : Apple refuse les accents et le `+` dans le nom d'une app signée avec un compte personnel (AltServer affiche alors « The name for this app is invalid »).
+### 📱 Différences avec Android
 
-Différences avec Android : pas de widget d'écran d'accueil (il faudrait une extension WidgetKit), pas de couleurs du fond d'écran, et iOS décide seul quand lancer la synchronisation en arrière-plan (souvent moins que toutes les 15 minutes).
+- L'application s'appelle « NetYPareo » sur l'écran d'accueil : Apple refuse les accents et le `+` dans le nom d'une app signée avec un compte personnel (AltServer affiche alors « The name for this app is invalid »).
+- Pas de widget d'écran d'accueil : il faudrait une extension WidgetKit, écrite en Swift.
+- Pas de couleurs tirées du fond d'écran : iOS ne les fournit pas, l'application garde sa couleur violette.
+- iOS décide seul quand lancer la synchronisation en arrière-plan, souvent moins que toutes les 15 minutes.
+- L'agenda "NetYParéo+" est créé dans iCloud (ou "Sur mon iPhone") et apparaît dans l'app Calendrier.
 
-Paquets principaux : `dio` et `cookie_jar` (requêtes et session), `html` (lecture des pages), `flutter_secure_storage` (identifiants), `dynamic_color` (couleurs du fond d'écran), `open_filex` (pièces jointes), `workmanager` et `flutter_local_notifications` (alertes), `device_calendar_plus` (agenda).
+### ⚙️ Le workflow GitHub Actions
+
+Le fichier [.github/workflows/ios.yml](.github/workflows/ios.yml) construit l'IPA sur un Mac prêté par GitHub.
+
+- **Quand** : à chaque push sur `main` qui touche au code (pas pour `README.md` ni `docs/`), ou à la main avec le bouton « Run workflow » de l'onglet **Actions**.
+- **Quoi** : `flutter pub get`, `flutter test`, puis `flutter build ios --release --no-codesign`. Un test raté arrête le build.
+- **Pull requests** : elles ne lancent pas de build. Le code d'une personne extérieure ne s'exécute pas tout seul.
+- **Coût** : gratuit tant que le dépôt est public. En privé, une minute macOS compte pour 10 dans le quota de GitHub.
+- **Artefact** : gardé 90 jours, téléchargeable par toute personne connectée à GitHub. L'IPA n'est pas signée : chacun la signe avec son propre identifiant Apple.
+- **Secrets** : aucun. Ni mot de passe, ni certificat Apple dans le dépôt.
+- **Entretien** : Flutter est pris sur le canal stable. Une nouvelle version de Flutter peut casser le build sans changement dans le code.
 
 ## 📝 Contribution
 

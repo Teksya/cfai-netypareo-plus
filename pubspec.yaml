@@ -1,5 +1,5 @@
 name: netypareo_plus
-description: "Application Android non officielle pour NetYParéo (CFAI LDA de Saint-Étienne)."
+description: "Application Android et iOS non officielle pour NetYParéo (CFAI LDA de Saint-Étienne)."
 publish_to: 'none'
 version: 0.3.0+3
 
