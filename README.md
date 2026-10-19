@@ -57,7 +57,7 @@ Captures faites avec un vrai compte. Les noms des formateurs et de l'apprenti so
 ### 🔍 Jusqu'où va le projet
 
 - La première version tourne sur Android. Elle a été testée sur un émulateur (Android 16) avec un vrai compte apprenant.
-- La version iOS tourne sur un iPhone avec un vrai compte apprenant : planning, cahier de textes, absences et onglet "Plus" vérifiés. Les alertes, la synchronisation en arrière-plan et la copie dans l'agenda n'ont pas encore été testées sur iPhone.
+- La version iOS a été testée sur un iPhone avec un vrai compte apprenant.
 - NetYParéo n'a **pas d'API officielle**. L'application lit les mêmes pages et les mêmes appels que le site : si YMAG (l'éditeur) change le site, une partie de l'application peut cesser de fonctionner jusqu'à sa mise à jour.
 - Les notes n'ont pas encore été testées : aucune note n'était saisie au moment de l'exploration (septembre 2026).
 - L'application **lit** presque tout : la seule écriture est le bouton « Fait » du travail à faire. Rendre un devoir ou déposer un document restent à faire sur le site.
