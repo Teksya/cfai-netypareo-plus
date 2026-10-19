@@ -18,7 +18,7 @@ NetYParéo contient tout ce dont un apprenti a besoin : l'emploi du temps, le ca
 
 ### 🚀 Fonctionnalités
 
-Déjà dans l'application (version 0.3, Android) :
+Déjà dans l'application (version 0.3, Android et iOS, widget Android uniquement) :
 
 - **Connexion** avec ton compte NetYParéo, reconnexion automatique quand la session expire.
 - **Emploi du temps** consultable hors ligne, en quatre dispositions au choix : **jour** (la semaine en haut, le cours en cours mis en avant, les pauses affichées), **3 jours** et **semaine** (grille horaire, un bloc coloré par cours), **liste** (tous les cours à venir, avec les périodes sans cours au centre).
@@ -98,7 +98,19 @@ flutter run
 
 ### 🍏 iOS
 
-Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS (onglet **Actions**, artefact `netypareo_plus-ios`). Installe-la avec [Sideloadly](https://sideloadly.io) ou [AltStore](https://altstore.io) et ton identifiant Apple ; avec un compte gratuit, la signature est à refaire tous les 7 jours.
+Pas de Mac nécessaire : le workflow GitHub Actions `iOS` construit une IPA non signée sur un runner macOS, à chaque push sur `main` ou `ios-support` (onglet **Actions**, artefact `netypareo_plus-ios`). Elle s'installe avec [AltStore](https://altstore.io) ou [Sideloadly](https://sideloadly.io) et ton identifiant Apple.
+
+**Garder l'application (compte Apple gratuit)** : la signature dure 7 jours. AltStore la renouvelle tout seul si AltServer tourne sur le PC et que l'iPhone est sur le même Wi-Fi au moins une fois par semaine. À faire une fois, sous Windows :
+
+1. Installe iTunes et iCloud **depuis le site d'Apple** (pas les versions du Microsoft Store).
+2. Branche l'iPhone, ouvre iTunes et coche « Synchroniser avec cet iPhone en Wi-Fi ».
+3. Installe AltStore sur l'iPhone depuis AltServer (icône de la barre des tâches > Install AltStore).
+4. Dans AltStore, onglet **My Apps**, touche **+** et choisis `netypareo_plus.ipa`.
+5. Lance AltServer au démarrage de Windows.
+
+Si la signature expire, l'application ne s'ouvre plus mais garde ses données : la réinstaller suffit. Un compte gratuit est limité à 3 applications. Avec l'Apple Developer Program (99 €/an), la signature dure un an et TestFlight devient possible.
+
+Sur iOS, l'application s'appelle « NetYPareo » : Apple refuse les accents et le `+` dans le nom d'une app signée avec un compte personnel (AltServer affiche alors « The name for this app is invalid »).
 
 Différences avec Android : pas de widget d'écran d'accueil (il faudrait une extension WidgetKit), pas de couleurs du fond d'écran, et iOS décide seul quand lancer la synchronisation en arrière-plan (souvent moins que toutes les 15 minutes).
 
