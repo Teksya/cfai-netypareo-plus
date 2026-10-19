@@ -46,7 +46,13 @@ Prévu (visible et grisé dans l'onglet "Plus") :
 | :---: | :---: | :---: | :---: |
 | <img src="docs/screenshots/planning.png" width="200" alt="Planning du jour"> | <img src="docs/screenshots/seance.png" width="200" alt="Fiche d'un cours"> | <img src="docs/screenshots/cahier.png" width="200" alt="Cahier de textes"> | <img src="docs/screenshots/plus.png" width="200" alt="Onglet Plus"> |
 
-Captures faites avec un vrai compte. Les noms des formateurs sont masqués.
+Sur iOS :
+
+| Planning | Cahier de textes | Absences | Plus |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/ios-planning.png" width="200" alt="Planning du jour sur iPhone"> | <img src="docs/screenshots/ios-cahier.png" width="200" alt="Cahier de textes sur iPhone"> | <img src="docs/screenshots/ios-absences.png" width="200" alt="Absences sur iPhone"> | <img src="docs/screenshots/ios-plus.png" width="200" alt="Onglet Plus sur iPhone"> |
+
+Captures faites avec un vrai compte. Les noms des formateurs et de l'apprenti sont masqués.
 
 ### 🔍 Jusqu'où va le projet
 
