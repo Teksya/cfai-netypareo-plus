@@ -91,7 +91,7 @@ class ProfilePage extends StatelessWidget {
                       final allowed = await state.setAlerts(on);
                       if (!allowed && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Notifications bloquées : autorise-les dans les réglages Android.'),
+                          content: Text('Notifications bloquées : autorise-les dans les réglages du téléphone.'),
                         ));
                       }
                     },
@@ -102,9 +102,12 @@ class ProfilePage extends StatelessWidget {
                   child: SwitchListTile(
                     secondary: const Icon(Icons.event_available_rounded),
                     title: const Text('Copier dans mon agenda'),
-                    subtitle: const Text(
-                      'Ajoute un agenda "NetYParéo+" au téléphone, visible dans Google Agenda, '
-                      'Samsung Agenda... Il se met à jour à chaque synchronisation.',
+                    subtitle: Text(
+                      Theme.of(context).platform == TargetPlatform.iOS
+                          ? 'Ajoute un agenda "NetYParéo+" à l\'iPhone, visible dans l\'app Calendrier. '
+                              'Il se met à jour à chaque synchronisation.'
+                          : 'Ajoute un agenda "NetYParéo+" au téléphone, visible dans Google Agenda, '
+                              'Samsung Agenda... Il se met à jour à chaque synchronisation.',
                     ),
                     isThreeLine: true,
                     value: state.calendarEnabled,
@@ -114,7 +117,7 @@ class ProfilePage extends StatelessWidget {
                         final allowed = await state.setCalendar(on);
                         messenger.showSnackBar(SnackBar(
                           content: Text(!allowed
-                              ? "Accès à l'agenda refusé : autorise-le dans les réglages Android."
+                              ? "Accès à l'agenda refusé : autorise-le dans les réglages du téléphone."
                               : on
                                   ? "Planning copié dans l'agenda NetYParéo+."
                                   : 'Agenda NetYParéo+ retiré du téléphone.'),

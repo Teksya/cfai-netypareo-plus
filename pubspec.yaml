@@ -1,5 +1,5 @@
 name: netypareo_plus
-description: "Application Android non officielle pour NetYParéo (CFAI LDA de Saint-Étienne)."
+description: "Application Android et iOS non officielle pour NetYParéo (CFAI LDA de Saint-Étienne)."
 publish_to: 'none'
 version: 0.3.0+3
 
@@ -38,8 +38,10 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: assets/logo/logo.png
+  remove_alpha_ios: true
+  background_color_ios: "#EDEBFF"
   adaptive_icon_background: "#EDEBFF"
   adaptive_icon_foreground: assets/logo/logo_foreground.png
   adaptive_icon_monochrome: assets/logo/logo_foreground.png
